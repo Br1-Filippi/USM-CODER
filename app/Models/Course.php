@@ -9,7 +9,7 @@ class Course extends Model
 {
     use SoftDeletes;
 
-    protected $table = 'course';
+    protected $table = 'courses';
 
     public function career()
     {
