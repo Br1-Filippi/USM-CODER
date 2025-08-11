@@ -1,0 +1,28 @@
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\SoftDeletes;
+
+class Test extends Model
+{
+    use SoftDeletes;
+
+    protected $table = 'test';
+
+    public function language()
+    {
+        return $this->belongsTo(Language::class, 'lenguaje_id');
+    }
+
+    public function course()
+    {
+        return $this->belongsTo(Course::class, 'course_id');
+    }
+
+    public function questions()
+    {
+        return $this->hasMany(Question::class);
+    }
+}
