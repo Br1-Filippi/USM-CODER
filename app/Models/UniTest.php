@@ -9,7 +9,7 @@ class UniTest extends Model
 {
     use SoftDeletes;
 
-    protected $table = 'uni_test';
+    protected $table = 'uni_tests';
 
     public function question()
     {

@@ -9,7 +9,7 @@ class Test extends Model
 {
     use SoftDeletes;
 
-    protected $table = 'test';
+    protected $table = 'tests';
 
     public function language()
     {

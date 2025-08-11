@@ -9,7 +9,7 @@ class Admin extends Model
 {
     use SoftDeletes;
 
-    protected $table = 'admin';
+    protected $table = 'admins';
 
     protected $primaryKey = 'id';
     public $incrementing = false;

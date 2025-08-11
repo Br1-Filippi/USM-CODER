@@ -9,7 +9,7 @@ class Submission extends Model
 {
     use SoftDeletes;
 
-    protected $table = 'submission';
+    protected $table = 'submissions';
 
     protected $primaryKey = 'token';
     public $incrementing = false;
