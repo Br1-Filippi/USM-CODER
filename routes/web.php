@@ -3,10 +3,27 @@
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Http;
 
+use App\Http\Controllers\UserController;
+use App\Http\Controllers\HomeController;
 
-Route::get('/', function () {
-    return view('welcome');
-});
+//Public Routes
+
+Route::get('/', [HomeController::class, 'index'])->name('index');
+
+Route::get('/loginForm', [UserController::class, 'loginForm'])->name('loginForm');
+Route::post('/login', [UserController::class, 'login'])->name('login');
+Route::post('/logout', [UserController::class, 'logout'])->name('logout');
+Route::get('/registerForm', [UserController::class, 'registerForm'])->name('registerForm');
+
+
+
+
+
+
+
+
+
+
 
 // routes/web.php
 Route::post('/run-code', function (\Illuminate\Http\Request $request) {
