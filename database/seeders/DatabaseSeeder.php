@@ -2,9 +2,9 @@
 
 namespace Database\Seeders;
 
-use App\Models\User;
-// use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
 
 class DatabaseSeeder extends Seeder
 {
@@ -13,11 +13,42 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
-        // User::factory(10)->create();
+        // Career
+        $careerId = DB::table('careers')->insertGetId([
+            'name' => 'Computer Science',
+            'deleted_at' => null,
+        ]);
 
-        User::factory()->create([
-            'name' => 'Test User',
-            'email' => 'test@example.com',
+        // User
+        $userId = DB::table('users')->insertGetId([
+            'email' => 'profesor@usm.cl',
+            'password' => Hash::make('1234'),
+            'tipo' => 'profesor',
+            'deleted_at' => null,
+        ]);
+
+        DB::table('users')->insertGetId([
+            'email' => 'alumno@usm.cl',
+            'password' => Hash::make('1234'),
+            'tipo' => 'alumno',
+            'deleted_at' => null,
+        ]);
+
+        // Course
+        $courseId = DB::table('courses')->insertGetId([
+            'career_id' => $careerId,
+            'deleted_at' => null,
+        ]);
+
+        // Test
+        DB::table('tests')->insert([
+            'course_id' => $courseId,
+            'deleted_at' => null,
+        ]);
+
+        DB::table('languages')->insert([
+            ['id' => 71 ,'name' => 'Python', 'deleted_at' => null],
+           
         ]);
     }
 }

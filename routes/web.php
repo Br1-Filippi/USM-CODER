@@ -5,11 +5,14 @@ use Illuminate\Support\Facades\Http;
 
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\HomeController;
+use App\Http\Controllers\CourseController;
+use App\Http\Controllers\QuestionController;
+use App\Http\Controllers\TestController;
+use App\Http\Controllers\CodeController;
 
 //Public Routes
 
 Route::get('/', [HomeController::class, 'index'])->name('index');
-
 Route::get('/loginForm', [UserController::class, 'loginForm'])->name('loginForm');
 Route::post('/login', [UserController::class, 'login'])->name('login');
 Route::post('/logout', [UserController::class, 'logout'])->name('logout');
@@ -17,42 +20,28 @@ Route::get('/registerForm', [UserController::class, 'registerForm'])->name('regi
 
 
 
+Route::get('/landing', [HomeController::class, 'landing'])->name('landing');
+
+
+//Test
+Route::resource('tests', TestController::class);
 
 
 
+//Question Routes
+Route::get('/test/{test}/questions/create', [QuestionController::class, 'create'])->name('questions.create');   
+Route::post('/test/{test_id}/questions/store', [QuestionController::class, 'store'])->name('questions.store');
+Route::get('/test/{test_id}/question/{question_id}', [QuestionController::class, 'show'])->name('questions.show');
+
+// Playground Routes
+
+Route::get('/playground', [HomeController::class, 'playground'])->name('playground');
 
 
 
+//code excetution routes
+Route::post('/run-code', [CodeController::class, 'runCode'])->name('run-code');
+Route::get('/code-result/{token}', [CodeController::class, 'getCodeResult'])->name('code-result');
 
 
-// routes/web.php
-Route::post('/run-code', function (\Illuminate\Http\Request $request) {
-    $response = Http::withHeaders([
-        'X-RapidAPI-Key' => env('JUDGE_API_KEY'),
-        'X-RapidAPI-Host' => 'judge0-ce.p.rapidapi.com',
-        'Content-Type' => 'application/json'
-    ])->post(env('JUDGE_API_URL') . '/submissions?base64_encoded=false&wait=false', [
-        'source_code' => $request->source_code,
-        'language_id' => $request->language_id,
-        'stdin' => $request->stdin ?? ''
-    ]);
 
-    if (!$response->successful()) {
-        return response()->json([
-            'error' => 'Error al enviar código',
-            'details' => $response->body()
-        ], 500);
-    }
-
-    return response()->json(['token' => $response['token'] ?? null]);
-});
-
-Route::get('/code-result/{token}', function ($token) {
-    $response = Http::withHeaders([
-        'X-RapidAPI-Key' => env('JUDGE_API_KEY'),
-        'X-RapidAPI-Host' => 'judge0-ce.p.rapidapi.com',
-        'Content-Type' => 'application/json'
-    ])->get(env('JUDGE_API_URL') . "/submissions/{$token}?base64_encoded=false");
-
-    return response()->json($response->json());
-});

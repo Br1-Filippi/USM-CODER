@@ -4,6 +4,9 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use App\Models\User;
+use Illuminate\Support\Facades\Auth;
+use App\Http\Requests\LoginRequest;
+use App\Models\Test;
 
 class UserController extends Controller
 {
@@ -69,23 +72,17 @@ class UserController extends Controller
         return view('user.login');
     }
 
-    public function login(Request $request)
+    public function login(LoginRequest $request)
     {
-        $credentials = $request->validate([ //Convert to form request validation
-            'email'    => 'required|email',
-            'password' => 'required'
-        ]);
+        $credentials = $request->validated();
 
         if (Auth::attempt($credentials)) {
             $request->session()->regenerate();
 
             $user = Auth::user();
+            $tests = Test::all();
 
-            return response()->json([
-                'message' => 'Login successful',
-                'user'    => $user,
-                'role'    => $user->role
-            ]);
+            return view('landing', compact('tests'));
         }
 
         return response()->json(['message' => 'Invalid credentials'], 401);

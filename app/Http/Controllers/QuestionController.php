@@ -4,6 +4,8 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use App\Models\Question;
+use App\Models\Language;
+use App\Models\Test;
 
 class QuestionController extends Controller
 {
@@ -12,31 +14,45 @@ class QuestionController extends Controller
      */
     public function index()
     {
-        //
+        return view('question.index');
     }
 
     /**
      * Show the form for creating a new resource.
      */
-    public function create()
+    public function create($test_id)
     {
-        //
+        $lenguajes = Language::all();
+            
+        return view('question.create', compact('lenguajes', 'test_id'));
     }
 
     /**
      * Store a newly created resource in storage.
      */
-    public function store(Request $request)
+    public function store(Request $request, $test_id) //Crear form request
     {
-        //
+
+        $question = new Question();
+        $question->title = $request->input('title');
+        $question->statement = $request->input('statement');
+        $question->starting_code = $request->input('starting_code');
+        $question->language_id = $request->input('language');
+        $question->test_id = $test_id;
+
+        $question->save();
+
+        return redirect()->route('tests.show', $test_id);
     }
 
     /**
      * Display the specified resource.
      */
-    public function show(string $id)
+    public function show($test_id, $question_id)
     {
-        //
+        $question = Question::find($question_id);
+
+        return view('question.show', compact('question', 'test_id'));
     }
 
     /**

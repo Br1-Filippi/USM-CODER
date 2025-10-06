@@ -28,7 +28,7 @@ class SubmissionController extends Controller
      */
     public function store(Request $request)
     {
-        //
+        
     }
 
     /**
@@ -62,4 +62,5 @@ class SubmissionController extends Controller
     {
         //
     }
+
 }
