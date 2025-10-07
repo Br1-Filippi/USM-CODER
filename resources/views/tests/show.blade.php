@@ -20,6 +20,9 @@
                                 <h5>{{ $question->title }}</h5>
                                 <p>{{ $question->statement }}</p>
                             </div>
+                            <a href="{{ route('submissions.index', ['question_id' => $question->id]) }}" class="btn btn-warning text-white">
+                                Ver Respuestas
+                            </a>    
                             <a href="{{ route('questions.show', ['test_id' => $test->id, 'question_id' => $question->id]) }}" class="btn btn-success">
                                 Responder
                             </a>    

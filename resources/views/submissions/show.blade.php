@@ -3,9 +3,11 @@
 @section('main-content')
 <div class="container-fluid">
 
+    <!-- ENCABEZADO Y ACCIONES -->
     <div class="row mb-3 align-items-center">
         <div class="col-md-9">
             <h2 class="mb-2">{{ $question->title }}</h2>
+            <h2 class="mb-2">{{ $submission->user->email }}</h2>
             <div class="card mb-3 bg-light border-secondary">
                 <div class="card-body py-2">
                     <small class="fw-bold d-block mb-1">Enunciado</small>
@@ -18,20 +20,20 @@
             <h4 class="text-secondary fw-light mb-0">Acciones</h4>
             <div class="d-flex gap-2 w-100 justify-content-end">
                 <button type="button" id="runCode" class="btn btn-secondary flex-grow-1">
-                    Run Code
+                    <i class="bi bi-play-circle"></i> Ejecutar Código
                 </button>
-                <button type="button" id="sendAnswer" class="btn btn-primary flex-grow-1">
-                    Enviar Respuesta
+                <button type="button" id="reEvaluate" class="btn btn-warning flex-grow-1">
+                    <i class="bi bi-arrow-repeat"></i> Re-evaluar
                 </button>
             </div>
         </div>
     </div>
-    
+
     <hr class="mb-4">
 
     <div class="row">
         <div class="col-lg-9">
-            <label class="form-label fw-bold">Tu Código</label>
+            <label class="form-label fw-bold">Código del Usuario</label>
             <div id="editor" style="height: 600px; border: 1px solid #ddd;"></div>
         </div>
 
@@ -49,7 +51,6 @@
     </div>
 </div>
 
-<!-- ESTILOS -->
 <style>
 .flex-grow-1 > textarea {
     height: 100%;
@@ -58,19 +59,20 @@
 </style>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.45.0/min/vs/loader.min.js"></script>
+<link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet">
 
 <script>
 (function () {
-    const starterCode = `{!! addslashes($question->starting_code ?? '// Escribe tu código aquí...') !!}`;
+    const starterCode = `{!! addslashes($submission->code ?? '// No hay código para esta submission...') !!}`;
 
     window.require.config({ paths: { vs: 'https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.45.0/min/vs' }});
     window.require(['vs/editor/editor.main'], function () {
         window.editor = monaco.editor.create(document.getElementById('editor'), {
             value: starterCode,
-            language: 'python', //deberiamos cambiar el lenguaje de monaco usando $question->language_id
+            language: 'python', // Puedes cambiarlo usando $question->language_id
             theme: 'vs-light',
             automaticLayout: true,
-            minimap: { enabled: false }
+            readOnly: true, //Ojo PREGUNTAR HALBAR CON EL PROFE
         });
     });
 })();
@@ -108,35 +110,6 @@ document.getElementById('runCode').addEventListener('click', async () => {
 
     } catch (err) {
         outputArea.value = 'Error al ejecutar el código';
-    }
-});
-
-document.getElementById('sendAnswer').addEventListener('click', async () => {
-    const code = window.editor.getValue();
-    const questionId = {{ $question->id }}; 
-
-    try {
-        const response = await fetch(`/question/${questionId}/submit`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRF-TOKEN': '{{ csrf_token() }}',
-            },
-            body: JSON.stringify({
-                code: code,
-            }),
-        });
-
-        const data = await response.json();
-
-        if (response.ok) {
-            alert('Código enviado correctamente');
-        } else {
-            alert(`Error: ${data.error || data.message}`);
-        }
-    } catch (error) {
-        alert('Error en la solicitud al servidor');
-        console.error(error);
     }
 });
 </script>

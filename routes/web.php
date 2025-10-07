@@ -12,7 +12,6 @@ use App\Http\Controllers\CodeController;
 use App\Http\Controllers\SubmissionController;
 
 //Public Routes
-
 Route::get('/', [HomeController::class, 'index'])->name('index');
 Route::get('/loginForm', [UserController::class, 'loginForm'])->name('loginForm');
 Route::post('/login', [UserController::class, 'login'])->name('login');
@@ -38,7 +37,9 @@ Route::get('/test/{test_id}/question/{question_id}', [QuestionController::class,
 //code excetution routes
 Route::post('/run-code', [CodeController::class, 'runCode'])->name('run-code');
 
-
+//Submission Routes
 Route::post('/question/{question_id}/submit', [SubmissionController::class, 'submitCode'])->name('submit-code');
+Route::get('/question/{question_id}/submissions', [SubmissionController::class, 'index'])->name('submissions.index');
+Route::get('/question/{question_id}/submissions/{submission_id}', [SubmissionController::class, 'show'])->name('submissions.show');
 
 
