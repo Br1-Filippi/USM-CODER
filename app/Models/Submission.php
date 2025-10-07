@@ -10,14 +10,12 @@ class Submission extends Model
     use SoftDeletes;
 
     protected $table = 'submissions';
-
-    protected $primaryKey = 'token';
+    public $timestamps = false;
     public $incrementing = false;
-    protected $keyType = 'string';
 
-    public function student()
+    public function user()
     {
-        return $this->belongsTo(Student::class);
+        return $this->belongsTo(User::class);
     }
 
     public function question()

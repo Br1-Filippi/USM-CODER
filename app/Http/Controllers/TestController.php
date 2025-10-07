@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use App\Models\Test;
+use App\Models\Question;
 
 class TestController extends Controller
 {
@@ -12,7 +13,7 @@ class TestController extends Controller
      */
     public function index()
     {
-        //
+        
     }
 
     /**
@@ -36,7 +37,10 @@ class TestController extends Controller
      */
     public function show(string $id)
     {
-        //
+        $test = Test::find($id);
+        $questions = Question::where('test_id', $id)->get();
+
+        return view('tests.show', compact('test', 'questions'));
     }
 
     /**

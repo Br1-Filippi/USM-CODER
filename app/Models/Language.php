@@ -11,8 +11,8 @@ class Language extends Model
 
     protected $table = 'languages';
 
-    public function tests()
+    public function question()
     {
-        return $this->hasMany(Test::class);
+        return $this->hasMany(question::class);
     }
 }

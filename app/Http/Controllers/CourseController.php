@@ -12,7 +12,8 @@ class CourseController extends Controller
      */
     public function index()
     {
-        //
+        $courses = Course::all();
+        return view('courses.index', compact('courses'));
     }
 
     /**
@@ -62,4 +63,6 @@ class CourseController extends Controller
     {
         //
     }
+
+
 }

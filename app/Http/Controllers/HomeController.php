@@ -61,4 +61,11 @@ class HomeController extends Controller
     {
         //
     }
+
+    //
+
+    public function playground()
+    {
+        return view('playground');
+    }
 }

@@ -9,8 +9,9 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('submissions', function (Blueprint $table) {
-            $table->string('token')->primary();
-            $table->foreignId('student_id')->constrained('students');
+            $table->id();
+            $table->longtext('code');
+            $table->foreignId('user_id')->constrained('users');
             $table->foreignId('question_id')->constrained('questions');
             $table->softDeletes();
         });

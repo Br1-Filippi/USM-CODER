@@ -10,7 +10,6 @@ return new class extends Migration
     {
         Schema::create('tests', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('language_id')->nullable()->constrained('languages');
             $table->foreignId('course_id')->constrained('courses');
             $table->softDeletes();
         });

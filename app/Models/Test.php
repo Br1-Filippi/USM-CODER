@@ -11,10 +11,6 @@ class Test extends Model
 
     protected $table = 'tests';
 
-    public function language()
-    {
-        return $this->belongsTo(Language::class, 'lenguaje_id');
-    }
 
     public function course()
     {
