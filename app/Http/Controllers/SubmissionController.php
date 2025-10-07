@@ -4,15 +4,19 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use App\Models\Submission;
+use App\Models\Question;
 
 class SubmissionController extends Controller
 {
     /**
      * Display a listing of the resource.
      */
-    public function index()
+    public function index($question_id)
     {
-        //
+        $submissions = Submission::where('question_id', $question_id)->get();
+        $question = Question::find($question_id);
+
+        return view('submissions.index', compact('submissions', 'question'));
     }
 
     /**
@@ -53,9 +57,13 @@ class SubmissionController extends Controller
     /**
      * Display the specified resource.
      */
-    public function show(string $id)
+    public function show(string $submission_id, $question_id)
     {
-        //
+
+        $question = Question::find($question_id);
+        $submission = Submission::find($submission_id);
+
+        return view('submissions.show', compact('submission', 'question'));
     }
 
     /**
