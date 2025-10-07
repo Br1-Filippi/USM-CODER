@@ -26,9 +26,28 @@ class SubmissionController extends Controller
     /**
      * Store a newly created resource in storage.
      */
-    public function store(Request $request)
+    public function submitCode(Request $request, $question_id)
     {
-        
+
+        $user = auth()->user();
+
+        if (!$user || $user->tipo != 'alumno') {
+            return response()->json(['error' => 'Unauthorized'], 403);
+        } else {
+
+            $submission = new Submission();
+
+            $submission->code = $request->input('code');
+            $submission->user_id = $user->id;
+            $submission->question_id = $question_id;
+
+            $submission->save();
+        }
+
+        return response()->json([
+        'message' => 'Código enviado correctamente',
+        'submission_id' => $submission->id,
+        ]);
     }
 
     /**

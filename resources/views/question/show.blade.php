@@ -3,6 +3,7 @@
 @section('main-content')
 <div class="container-fluid">
 
+    <!-- ENCABEZADO Y ACCIONES -->
     <div class="row mb-3 align-items-center">
         <div class="col-md-9">
             <h2 class="mb-2">{{ $question->title }}</h2>
@@ -17,14 +18,19 @@
         <div class="col-md-3 d-flex flex-column align-items-end gap-2">
             <h4 class="text-secondary fw-light mb-0">Acciones</h4>
             <div class="d-flex gap-2 w-100 justify-content-end">
-                <button type="button" id="runCode" class="btn btn-secondary flex-grow-1">Run Code</button>
-                <button type="button" id="sendAnswer" class="btn btn-primary flex-grow-1">Enviar Respuesta</button>
+                <button type="button" id="runCode" class="btn btn-secondary flex-grow-1">
+                    Run Code
+                </button>
+                <button type="button" id="sendAnswer" class="btn btn-primary flex-grow-1">
+                    Enviar Respuesta
+                </button>
             </div>
         </div>
     </div>
     
     <hr class="mb-4">
 
+    <!-- EDITOR Y IO -->
     <div class="row">
         <div class="col-lg-9">
             <label class="form-label fw-bold">Tu Código</label>
@@ -39,12 +45,13 @@
 
             <div class="mb-3 flex-grow-1 d-flex flex-column">
                 <label for="output" class="form-label fw-bold">Salida (output)</label>
-                <textarea id="output" class="form-control flex-grow-1" readonly placeholder="El resultado de la ejecución aparecerá aquí..."></textarea>
+                <textarea id="output" class="form-control flex-grow-1" readonly placeholder="El resultado aparecerá aquí..."></textarea>
             </div>
         </div>
     </div>
 </div>
 
+<!-- ESTILOS -->
 <style>
 .flex-grow-1 > textarea {
     height: 100%;
@@ -52,7 +59,9 @@
 }
 </style>
 
+<!-- MONACO EDITOR -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.45.0/min/vs/loader.min.js"></script>
+
 <script>
 (function () {
     const starterCode = `{!! addslashes($question->starting_code ?? '// Escribe tu código aquí...') !!}`;
@@ -61,7 +70,7 @@
     window.require(['vs/editor/editor.main'], function () {
         window.editor = monaco.editor.create(document.getElementById('editor'), {
             value: starterCode,
-            language: 'python',
+            language: 'python', //deberiamos cambiar el lenguaje de monaco usando $question->language_id
             theme: 'vs-light',
             automaticLayout: true,
             minimap: { enabled: false }
@@ -101,7 +110,36 @@ document.getElementById('runCode').addEventListener('click', async () => {
         }
 
     } catch (err) {
-        outputArea.value = `Error al ejecutar el código`;
+        outputArea.value = 'Error al ejecutar el código';
+    }
+});
+
+document.getElementById('sendAnswer').addEventListener('click', async () => {
+    const code = window.editor.getValue();
+    const questionId = {{ $question->id }}; 
+
+    try {
+        const response = await fetch(`/question/${questionId}/submit`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': '{{ csrf_token() }}',
+            },
+            body: JSON.stringify({
+                code: code,
+            }),
+        });
+
+        const data = await response.json();
+
+        if (response.ok) {
+            alert('Código enviado correctamente');
+        } else {
+            alert(`Error: ${data.error || data.message}`);
+        }
+    } catch (error) {
+        alert('Error en la solicitud al servidor');
+        console.error(error);
     }
 });
 </script>
