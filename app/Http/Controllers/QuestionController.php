@@ -5,7 +5,7 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use App\Models\Question;
 use App\Models\Language;
-use App\Models\Test;
+use App\Models\UniTest;
 
 class QuestionController extends Controller
 {
@@ -41,6 +41,16 @@ class QuestionController extends Controller
         $question->test_id = $test_id;
 
         $question->save();
+
+        if (!empty($request->input('tests'))) {
+            foreach ($request->input('tests') as $testData) {
+                $test = new UniTest();
+                $test->stdin = $testData['stdin'];
+                $test->expected_output = $testData['expected_output'];
+                $test->question_id = $question->id;
+                $test->save();
+            }
+        }
 
         return redirect()->route('tests.show', $test_id);
     }

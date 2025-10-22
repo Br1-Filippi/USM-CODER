@@ -10,6 +10,7 @@ class UniTest extends Model
     use SoftDeletes;
 
     protected $table = 'uni_tests';
+    public $timestamps = false;
 
     public function question()
     {

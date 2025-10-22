@@ -10,8 +10,8 @@ return new class extends Migration
     {
         Schema::create('uni_tests', function (Blueprint $table) {
             $table->id();
-            $table->string('stdin');
-            $table->string('expected_output');
+            $table->text('stdin');
+            $table->text('expected_output');
             $table->foreignId('question_id')->constrained('questions');
             $table->softDeletes();
         });

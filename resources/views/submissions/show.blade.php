@@ -7,7 +7,7 @@
     <div class="row mb-3 align-items-center">
         <div class="col-md-9">
             <h2 class="mb-2">{{ $question->title }}</h2>
-            <h2 class="mb-2">{{ $submission->user->email }}</h2>
+            <h5 class="text-muted">{{ $submission->user->email }}</h5>
             <div class="card mb-3 bg-light border-secondary">
                 <div class="card-body py-2">
                     <small class="fw-bold d-block mb-1">Enunciado</small>
@@ -49,8 +49,46 @@
             </div>
         </div>
     </div>
+
+    <hr class="my-4">
+
+    <div class="mt-4">
+        <h4 class="mb-3">Casos de Prueba</h4>
+
+        @if ($unitests->isEmpty())
+            <div class="alert alert-info">Esta pregunta no tiene tests configurados.</div>
+        @else
+            <div class="d-flex justify-content-end mb-3">
+                <button class="btn btn-success" id="runAllTests">
+                    <i class="bi bi-play-fill"></i> Probar Todos
+                </button>
+            </div>
+
+            <div id="tests-list" class="list-group">
+                @foreach ($unitests as $unitest)
+                    <div class="list-group-item shadow-sm mb-2 p-3 border rounded">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <h6 class="fw-bold mb-0">Test #{{ $loop->iteration }}</h6>
+                            <button class="btn btn-outline-primary btn-sm run-single-test" 
+                                data-stdin="{{ $unitest->stdin }}" 
+                                data-expected="{{ $unitest->expected_output }}">
+                                <i class="bi bi-play"></i> Ejecutar
+                            </button>
+                        </div>
+                        <p class="mb-1"><strong>Entrada:</strong> <code>{{ $unitest->stdin }}</code></p>
+                        <p class="mb-1"><strong>Salida esperada:</strong> <code>{{ $unitest->expected_output }}</code></p>
+                        <p class="mb-0"><strong>Resultado:</strong> 
+                            <span class="test-result text-secondary">Sin ejecutar</span>
+                        </p>
+                    </div>
+                @endforeach
+            </div>
+        @endif
+    </div>
+
 </div>
 
+<!-- ESTILOS -->
 <style>
 .flex-grow-1 > textarea {
     height: 100%;
@@ -58,6 +96,7 @@
 }
 </style>
 
+<!-- DEPENDENCIAS -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.45.0/min/vs/loader.min.js"></script>
 <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet">
 
@@ -69,10 +108,10 @@
     window.require(['vs/editor/editor.main'], function () {
         window.editor = monaco.editor.create(document.getElementById('editor'), {
             value: starterCode,
-            language: 'python', // Puedes cambiarlo usando $question->language_id
+            language: 'python',
             theme: 'vs-light',
             automaticLayout: true,
-            readOnly: true, //Ojo PREGUNTAR HALBAR CON EL PROFE
+            readOnly: true,
         });
     });
 })();
@@ -110,6 +149,59 @@ document.getElementById('runCode').addEventListener('click', async () => {
 
     } catch (err) {
         outputArea.value = 'Error al ejecutar el código';
+    }
+});
+
+
+document.querySelectorAll('.run-single-test').forEach(btn => {
+    btn.addEventListener('click', async () => {
+        const stdin = btn.dataset.stdin;
+        const expected = btn.dataset.expected;
+        const resultSpan = btn.closest('.list-group-item').querySelector('.test-result');
+        const code = window.editor.getValue();
+
+        resultSpan.textContent = 'Ejecutando...';
+        resultSpan.classList.remove('success', 'error');
+
+        try {
+            const response = await fetch('{{ route("run-code") }}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                },
+                body: JSON.stringify({
+                    source_code: code,
+                    language_id: {{ $question->language_id ?? 71 }},
+                    stdin: stdin,
+                    wait: true
+                })
+            });
+
+            const data = await response.json();
+            const output = data.stdout?.trim() ?? '';
+
+            if (output === expected.trim()) {
+                resultSpan.textContent = `Correcto (${output})`;
+                resultSpan.classList.add('success');
+            } else {
+                resultSpan.textContent = `Incorrecto (Salida: ${output})`;
+                resultSpan.classList.add('error');
+            }
+
+        } catch (error) {
+            resultSpan.textContent = 'Error al ejecutar test';
+            resultSpan.classList.add('error');
+        }
+    });
+});
+
+// Ejecutar todos los tests
+document.getElementById('runAllTests')?.addEventListener('click', async () => {
+    const testButtons = document.querySelectorAll('.run-single-test');
+    for (const btn of testButtons) {
+        btn.click();
+        await new Promise(r => setTimeout(r, 500)); 
     }
 });
 </script>

@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use App\Models\Submission;
 use App\Models\Question;
+use App\Models\UniTest;
 
 class SubmissionController extends Controller
 {
@@ -63,7 +64,9 @@ class SubmissionController extends Controller
         $question = Question::find($question_id);
         $submission = Submission::find($submission_id);
 
-        return view('submissions.show', compact('submission', 'question'));
+        $unitests = UniTest::where('question_id', $question_id)->get();
+
+        return view('submissions.show', compact('submission', 'question', 'unitests'));
     }
 
     /**
