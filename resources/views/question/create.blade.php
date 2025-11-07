@@ -22,13 +22,21 @@
 
                 <!-- Lenguaje -->
                 <div class="mb-3">
-                    <label for="language" class="form-label fw-bold">Lenguaje</label>
-                    <select class="form-select" id="language" name="language" required>
-                        <option value="" disabled selected>Selecciona un lenguaje</option>
-                        @foreach ($lenguajes as $lenguaje)
-                            <option value="{{ $lenguaje->id }}">{{ $lenguaje->name }}</option>
-                        @endforeach
-                    </select>
+                    <div class="row">
+                        <div class="col-md-8">
+                            <label for="language" class="form-label fw-bold">Lenguaje</label>
+                            <select class="form-select" id="language" name="language" required>
+                                <option value="" disabled selected>Selecciona un lenguaje</option>
+                                @foreach ($lenguajes as $lenguaje)
+                                    <option value="{{ $lenguaje->id }}">{{ $lenguaje->name }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label for="score" class="form-label fw-bold">Score</label>
+                            <input type="number" class="form-control" id="score" name="score" min="0" step="1" required>
+                        </div>
+                    </div>
                 </div>
 
                 <!-- Código inicial -->

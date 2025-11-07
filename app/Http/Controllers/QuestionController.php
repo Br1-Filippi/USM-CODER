@@ -36,6 +36,7 @@ class QuestionController extends Controller
         $question = new Question();
         $question->title = $request->input('title');
         $question->statement = $request->input('statement');
+        $question->score = $request->input('score');
         $question->starting_code = $request->input('starting_code');
         $question->language_id = $request->input('language');
         $question->test_id = $test_id;
