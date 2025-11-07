@@ -12,11 +12,11 @@ return new class extends Migration
             $table->id();
             $table->string('title');
             $table->longtext('statement');
+            $table->tinyinteger('score');
             $table->text('starting_code')->nullable();
             $table->foreignId('test_id')->constrained('tests');
             $table->foreignId('language_id')->nullable()->constrained('languages');
             $table->softDeletes();
-
         });
     }
 
