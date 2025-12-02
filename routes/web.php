@@ -10,6 +10,7 @@ use App\Http\Controllers\QuestionController;
 use App\Http\Controllers\TestController;
 use App\Http\Controllers\CodeController;
 use App\Http\Controllers\SubmissionController;
+use App\Http\Controllers\SebController;
 
 //Public Routes
 Route::get('/', [HomeController::class, 'index'])->name('index');
@@ -26,6 +27,9 @@ Route::get('/landing', [HomeController::class, 'landing'])->name('landing');
 //Test
 Route::resource('tests', TestController::class);
 
+//Safe exam Browser 
+Route::get('/tests/{test}/seb-config', [SebController::class, 'show'])->name('seb.config');
+Route::post('/tests/{test}/seb/download', [SebController::class, 'download'])->name('seb.download');
 
 
 //Question Routes
