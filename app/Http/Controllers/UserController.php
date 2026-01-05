@@ -82,10 +82,10 @@ class UserController extends Controller
             $user = Auth::user();
             $tests = Test::all();
 
-            return view('landing', compact('tests'));
+            return redirect()->route('landing');
         }
 
-        return response()->json(['message' => 'Invalid credentials'], 401);
+        return back()->withErrors();
     }
 
     public function registerForm()
@@ -115,6 +115,6 @@ class UserController extends Controller
         $request->session()->invalidate();
         $request->session()->regenerateToken();
 
-        return view('homea');
+        return redirect()->route('home');
     }
 }

@@ -7,7 +7,7 @@
 </head>
 <body>
     {{-- Contenido Principal --}}
-    <div class="p-2">
+    <div class="">
         @yield('main-content')
     </div>
     {{-- Contenido Principal --}}

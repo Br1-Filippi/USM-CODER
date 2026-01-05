@@ -18,9 +18,9 @@ class Question extends Model
         return $this->belongsTo(Test::class, 'test_id');
     }
 
-    public function uniTest()
+    public function unitests()
     {
-        return $this->hasOne(UniTest::class);
+        return $this->hasMany(UniTest::class);
     }
 
     public function submissions()

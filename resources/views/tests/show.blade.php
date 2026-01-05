@@ -7,6 +7,7 @@
         <h2 class="fw-bold text-primary">Test #{{ $test->id }}</h2>
 
         <div class="d-flex gap-2">
+            @can('teacher-admin')
             <a href="{{ route('seb.config', $test) }}" class="btn btn-outline-secondary">
                 Configurar Safe Exam Browser
             </a>
@@ -14,6 +15,7 @@
             <a href="{{ route('questions.create', $test ) }}" class="btn btn-primary shadow">
                 <i class="bi bi-plus-circle"></i> Nueva Pregunta
             </a>
+            @endcan
         </div>
     </div>
 
@@ -37,15 +39,18 @@
                             </div>
 
                             <div class="d-flex gap-2">
+                                @can('teacher-admin')
                                 <a href="{{ route('submissions.index', ['question_id' => $question->id]) }}"
                                    class="btn btn-warning text-white btn-sm shadow-sm">
                                     <i class="bi bi-eye"></i> Respuestas
                                 </a>
-
+                                @endcan
+                                @can('student-admin')
                                 <a href="{{ route('questions.show', ['test_id' => $test->id, 'question_id' => $question->id]) }}"
                                    class="btn btn-success btn-sm shadow-sm">
                                     <i class="bi bi-pencil-square"></i> Contestar
                                 </a>
+                                @endcan
                             </div>
                         </li>
                     @endforeach

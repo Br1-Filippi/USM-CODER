@@ -19,14 +19,12 @@ class SebController extends Controller
 
     public function download(Request $request, Test $test)
     {
-        // Validación básica (aunque sea PoC, así evitamos errores)
         $data = $request->validate([
             'start_url'     => ['required', 'url'],
             'quit_password' => ['nullable', 'string'],
             'allow_reload'  => ['nullable', 'boolean'],
         ]);
 
-        // Config SEB básica para pruebas
         $sebSettings = [
             'originatorVersion' => 'SEB_Laravel_Demo',
             'startURL'          => $data['start_url'],
@@ -35,11 +33,9 @@ class SebController extends Controller
         ];
 
         if (!empty($data['quit_password'])) {
-            // DEMO: texto plano. En producción deberías usar el campo hash de SEB.
             $sebSettings['quitPassword'] = $data['quit_password'];
         }
 
-        // Convertir array → plist XML
         $xml = $this->arrayToPlist($sebSettings);
 
         $fileName = 'test-' . $test->id . '.seb';

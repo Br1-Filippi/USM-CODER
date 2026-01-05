@@ -11,6 +11,7 @@ return new class extends Migration
         Schema::create('submissions', function (Blueprint $table) {
             $table->id();
             $table->longtext('code');
+            $table->tinyInteger('score');
             $table->foreignId('user_id')->constrained('users');
             $table->foreignId('question_id')->constrained('questions');
             $table->softDeletes();

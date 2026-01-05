@@ -1,73 +1,71 @@
 @extends('layouts.navbar')
 
 @section('main-content')
-<div class="container-fluid">
-
-    <div class="row mb-3 align-items-center">
-        <div class="col-md-9">
-            <h2 class="mb-2">{{ $question->title }}</h2>
-            <div class="card mb-3 bg-light border-secondary">
-                <div class="card-body py-2">
-                    <small class="fw-bold d-block mb-1">Enunciado</small>
-                    <p class="mb-0">{{ $question->statement }}</p>
-                </div>
+<div class="d-flex" style="height: calc(100vh - 56px); width: 100%;">
+    <!-- COLUMNA IZQUIERDA: Info y Acciones -->
+    <div class="bg-light border-end p-3 d-flex flex-column" style="width: 20%; overflow-y: auto;">
+        <h4 class="fw-bold text-primary mb-3">{{ $question->title }}</h4>
+        
+        <div class="card shadow-sm mb-3">
+            <div class="card-body">
+                <h6 class="text-muted mb-2">Enunciado</h6>
+                <p class="small mb-0">{{ $question->statement }}</p>
             </div>
         </div>
 
-        <div class="col-md-3 d-flex flex-column align-items-end gap-2">
-            <h4 class="text-secondary fw-light mb-0">Acciones</h4>
-            <div class="d-flex gap-2 w-100 justify-content-end">
-                <button type="button" id="runCode" class="btn btn-secondary flex-grow-1">
-                    Run Code
-                </button>
-                <button type="button" id="sendAnswer" class="btn btn-primary flex-grow-1">
-                    Enviar Respuesta
-                </button>
-            </div>
+        <div class="mt-auto">
+            <h6 class="text-secondary mb-2">Acciones</h6>
+            <button type="button" id="runCode" class="btn btn-success w-100 mb-2">
+                Ejecutar Codigo
+            </button>
+            <button type="button" id="sendAnswer" class="btn btn-primary w-100">
+                Enviar Respuesta
+            </button>
         </div>
     </div>
-    
-    <hr class="mb-4">
 
-    <div class="row">
-        <div class="col-lg-9">
-            <label class="form-label fw-bold">Tu Código</label>
-            <div id="editor" style="height: 600px; border: 1px solid #ddd;"></div>
+    <div class="flex-grow-1 d-flex flex-column">
+        <div class="flex-grow-1" style="min-height: 0;">
+            <div id="editor" style="height: 100%; width: 100%;"></div>
         </div>
 
-        <div class="col-lg-3 d-flex flex-column">
-            <div class="mb-3">
-                <label for="stdin" class="form-label fw-bold">Entrada (stdin)</label>
-                <textarea id="stdin" class="form-control" rows="8" placeholder="Ingresa los datos de entrada aquí..."></textarea>
-            </div>
-
-            <div class="mb-3 flex-grow-1 d-flex flex-column">
-                <label for="output" class="form-label fw-bold">Salida (output)</label>
-                <textarea id="output" class="form-control flex-grow-1" readonly placeholder="El resultado aparecerá aquí..."></textarea>
+        <div class="border-top" style="height: 200px;">
+            <div class="row g-0 h-100">
+                <div class="col-6 border-end d-flex flex-column">
+                    <div class="bg-dark text-white px-3 py-1">
+                        <small><strong>ENTRADA (stdin)</strong></small>
+                    </div>
+                    <textarea id="stdin" class="form-control border-0 rounded-0 flex-grow-1" 
+                              placeholder="Ingresa los datos de entrada aquí... 
+Ej : si tienes un input A = int(input()), escribe el valor de A aqui,
+Si tienes mas de un input van en orden de aparicion separados por saltos de linea." 
+                              style="resize: none; font-family: monospace; "></textarea>
+                </div>
+                <div class="col-6 d-flex flex-column">
+                    <div class="bg-dark text-white px-3 py-1">
+                        <small><strong>SALIDA (output)</strong></small>
+                    </div>
+                    <textarea id="output" class="form-control border-0 rounded-0 flex-grow-1" 
+                              readonly 
+                              placeholder="El resultado de tu codigo aparecerá aquí... " 
+                              style="resize: none; font-family: monospace; "></textarea>
+                </div>
             </div>
         </div>
     </div>
 </div>
 
-<!-- ESTILOS -->
-<style>
-.flex-grow-1 > textarea {
-    height: 100%;
-    min-height: 100px;
-}
-</style>
-
 <script src="https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.45.0/min/vs/loader.min.js"></script>
 
 <script>
 (function () {
-    const starterCode = `{!! addslashes($question->starting_code ?? '// Escribe tu código aquí...') !!}`;
+    const starterCode = `{!! addslashes($question->starting_code ?? '// Responde aca tu pregunta!!') !!}`;
 
     window.require.config({ paths: { vs: 'https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.45.0/min/vs' }});
     window.require(['vs/editor/editor.main'], function () {
         window.editor = monaco.editor.create(document.getElementById('editor'), {
             value: starterCode,
-            language: 'python', //deberiamos cambiar el lenguaje de monaco usando $question->language_id
+            language: 'python',
             theme: 'vs-light',
             automaticLayout: true,
             minimap: { enabled: false }
@@ -124,6 +122,7 @@ document.getElementById('sendAnswer').addEventListener('click', async () => {
             },
             body: JSON.stringify({
                 code: code,
+                language_id: {{ $question->language_id ?? 71 }} 
             }),
         });
 
