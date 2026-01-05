@@ -12,38 +12,45 @@ use App\Http\Controllers\CodeController;
 use App\Http\Controllers\SubmissionController;
 use App\Http\Controllers\SebController;
 
+
+
+
 //Public Routes
-Route::get('/', [HomeController::class, 'index'])->name('index');
+Route::get('/', [HomeController::class, 'index'])->name('home');
 Route::get('/loginForm', [UserController::class, 'loginForm'])->name('loginForm');
 Route::post('/login', [UserController::class, 'login'])->name('login');
 Route::post('/logout', [UserController::class, 'logout'])->name('logout');
 Route::get('/registerForm', [UserController::class, 'registerForm'])->name('registerForm');
 
+//Auth routes
+Route::middleware(['check.auth'])->group(function () {
+
+    Route::get('/landing', [HomeController::class, 'landing'])->name('landing');
+
+    //Test
+    Route::resource('tests', TestController::class);
+
+    //Safe exam Browser 
+    Route::get('/tests/{test}/seb-config', [SebController::class, 'show'])->name('seb.config');
+    Route::post('/tests/{test}/seb/download', [SebController::class, 'download'])->name('seb.download');
 
 
-Route::get('/landing', [HomeController::class, 'landing'])->name('landing');
+    //Question Routes
+    Route::get('/test/{test}/questions/create', [QuestionController::class, 'create'])->name('questions.create');   
+    Route::post('/test/{test_id}/questions/store', [QuestionController::class, 'store'])->name('questions.store');
+    Route::get('/test/{test_id}/question/{question_id}', [QuestionController::class, 'show'])->name('questions.show');
 
 
-//Test
-Route::resource('tests', TestController::class);
+    //code excetution routes
+    Route::post('/run-code', [CodeController::class, 'runCode'])->name('run-code');
+    Route::post('/run-single-test', [CodeController::class, 'runSingleTest'])->name('run-single-test');
+    Route::post('/run-all-tests', [CodeController::class, 'runAllTests'])->name('run-all-tests');
 
-//Safe exam Browser 
-Route::get('/tests/{test}/seb-config', [SebController::class, 'show'])->name('seb.config');
-Route::post('/tests/{test}/seb/download', [SebController::class, 'download'])->name('seb.download');
+    //Submission Routes
+    Route::post('/question/{question_id}/submit', [SubmissionController::class, 'submitCode'])->name('submit-code');
+    Route::get('/question/{question_id}/submissions', [SubmissionController::class, 'index'])->name('submissions.index');
+    Route::get('/question/{question_id}/submissions/{submission_id}', [SubmissionController::class, 'show'])->name('submissions.show');
 
-
-//Question Routes
-Route::get('/test/{test}/questions/create', [QuestionController::class, 'create'])->name('questions.create');   
-Route::post('/test/{test_id}/questions/store', [QuestionController::class, 'store'])->name('questions.store');
-Route::get('/test/{test_id}/question/{question_id}', [QuestionController::class, 'show'])->name('questions.show');
-
-
-//code excetution routes
-Route::post('/run-code', [CodeController::class, 'runCode'])->name('run-code');
-
-//Submission Routes
-Route::post('/question/{question_id}/submit', [SubmissionController::class, 'submitCode'])->name('submit-code');
-Route::get('/question/{question_id}/submissions', [SubmissionController::class, 'index'])->name('submissions.index');
-Route::get('/question/{question_id}/submissions/{submission_id}', [SubmissionController::class, 'show'])->name('submissions.show');
+});
 
 

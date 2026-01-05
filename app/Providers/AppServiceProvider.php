@@ -3,6 +3,7 @@
 namespace App\Providers;
 
 use Illuminate\Support\ServiceProvider;
+use Illuminate\Support\Facades\Gate;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -11,7 +12,12 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        //
+        Gate::define('teacher-admin', function ($user) {
+        return in_array($user->tipo, ['admin', 'profesor']);
+        });
+        Gate::define('student-admin', function ($user) {
+        return in_array($user->tipo, ['admin', 'alumno']);
+        });
     }
 
     /**

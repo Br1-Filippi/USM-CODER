@@ -8,7 +8,7 @@
 <body class="bg-gray-100 flex items-center justify-center h-screen">
 
     <div class="w-full max-w-sm bg-white rounded-xl shadow-lg p-6">
-        <h2 class="text-2xl font-bold mb-6 text-center">Inicio de Sesion</h2>
+        <h2 class="text-2xl font-bold mb-6 text-center">Bienvenido!</h2>
 
         <!-- Show errors -->
         @if ($errors->any())
@@ -31,12 +31,12 @@
             </div>
 
             <div class="mb-4">
-                <label class="block text-gray-700">Password</label>
+                <label class="block text-gray-700">Contraseña</label>
                 <input type="password" name="password" class="w-full border rounded px-3 py-2 mt-1">
             </div>
 
             <button type="submit" class="w-full bg-blue-500 text-white py-2 rounded hover:bg-blue-600">
-                Login
+                Iniciar Sesion
             </button>
         </form>
     </div>

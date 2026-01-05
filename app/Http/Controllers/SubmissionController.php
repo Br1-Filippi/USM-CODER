@@ -33,27 +33,53 @@ class SubmissionController extends Controller
      */
     public function submitCode(Request $request, $question_id)
     {
+        try {
+            $user = auth()->user();
+            if (!$user || $user->tipo != 'alumno') {
+                return response()->json(['error' => 'Unauthorized'], 403);
+            }
 
-        $user = auth()->user();
+            $request->validate([
+                'code' => 'required|string',
+                'language_id' => 'required|integer'
+            ]);
 
-        if (!$user || $user->tipo != 'alumno') {
-            return response()->json(['error' => 'Unauthorized'], 403);
-        } else {
+            $codeController = new CodeController();
+            
+            $score = $codeController->getScore(
+                $request->input('code'),
+                $request->input('language_id'),
+                $question_id
+            );
 
             $submission = new Submission();
-
             $submission->code = $request->input('code');
             $submission->user_id = $user->id;
             $submission->question_id = $question_id;
-
+            $submission->score = $score;
             $submission->save();
-        }
 
-        return response()->json([
-        'message' => 'Código enviado correctamente',
-        'submission_id' => $submission->id,
-        ]);
+            return response()->json([
+                'message' => 'Código enviado correctamente',
+                'submission_id' => $submission->id,
+                'score' => $score
+            ]);
+
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return response()->json([
+                'error' => 'Validation failed',
+                'messages' => $e->errors()
+            ], 422);
+            
+        } catch (\Exception $e) {
+            return response()->json([
+                'error' => 'Error al enviar código',
+                'message' => $e->getMessage()
+            ], 500);
+        }
     }
+
+
 
     /**
      * Display the specified resource.
