@@ -8,100 +8,100 @@ use App\Models\Question;
 
 class CodeController extends Controller
 {
-    public function runCode(Request $request)
+    /* =========================================================
+     |  HELPERS PRIVADOS (Judge0)
+     ========================================================= */
+
+    private function submitToJudge0(array $payload, bool $wait = false)
     {
-        try {
-            $response = Http::timeout(30)
+        return Http::timeout(30)
+            ->withHeaders([
+                'X-RapidAPI-Key' => env('JUDGE_API_KEY'),
+                'X-RapidAPI-Host' => env('JUDGE_API_HOST'),
+                'Content-Type' => 'application/json',
+            ])
+            ->post(
+                env('JUDGE_API_URL')
+                . '/submissions?base64_encoded=false'
+                . ($wait ? '&wait=true' : ''),
+                $payload
+            );
+    }
+
+    private function pollSubmission(string $token, int $maxAttempts = 15)
+    {
+        for ($i = 0; $i < $maxAttempts; $i++) {
+            sleep(2);
+
+            $response = Http::timeout(15)
                 ->withHeaders([
                     'X-RapidAPI-Key' => env('JUDGE_API_KEY'),
                     'X-RapidAPI-Host' => env('JUDGE_API_HOST'),
-                    'Content-Type' => 'application/json',
-                ])->post(env('JUDGE_API_URL') . '/submissions?base64_encoded=false', [
-                    'source_code' => $request->input('source_code'),
-                    'language_id' => $request->input('language_id'),
-                    'stdin' => $request->input('stdin', ''),
-                ]);
+                ])
+                ->get(
+                    env('JUDGE_API_URL')
+                    . "/submissions/{$token}?base64_encoded=false"
+                );
 
             if (!$response->successful()) {
-                \Log::error('Judge0 submission error', [
-                    'status' => $response->status(),
-                    'body' => $response->body()
-                ]);
-
-                return response()->json([
-                    'error' => 'Error al enviar código',
-                    'details' => $response->body(),
-                ], 500);
+                throw new \Exception('Error al obtener resultado desde Judge0');
             }
 
-            $submissionData = $response->json();
-            $token = $submissionData['token'];
+            $data = $response->json();
+            $statusId = $data['status']['id'] ?? null;
 
-            \Log::info('Submission created', ['token' => $token]);
-
-            $maxAttempts = 15;
-            $attempt = 0;
-            
-            while ($attempt < $maxAttempts) {
-                sleep(2);
-                
-                $resultResponse = Http::timeout(15)
-                    ->withHeaders([
-                        'X-RapidAPI-Key' => env('JUDGE_API_KEY'),
-                        'X-RapidAPI-Host' => env('JUDGE_API_HOST'),
-                    ])->get(env('JUDGE_API_URL') . '/submissions/' . $token . '?base64_encoded=false');
-
-                if (!$resultResponse->successful()) {
-                    \Log::error('Judge0 result error', [
-                        'status' => $resultResponse->status(),
-                        'body' => $resultResponse->body()
-                    ]);
-                    
-                    return response()->json([
-                        'error' => 'Error al obtener resultado',
-                        'details' => $resultResponse->body(),
-                    ], 500);
-                }
-
-                $data = $resultResponse->json();
-                $statusId = $data['status']['id'];
-
-                \Log::info('Polling attempt', [
-                    'attempt' => $attempt + 1,
-                    'status_id' => $statusId,
-                    'status_desc' => $data['status']['description'] ?? 'unknown'
-                ]);
-
-                if (!in_array($statusId, [1, 2])) {
-                    return response()->json([
-                        'stdout' => $data['stdout'] ?? null,
-                        'stderr' => $data['stderr'] ?? null,
-                        'compile_output' => $data['compile_output'] ?? null,
-                        'status' => $data['status'] ?? null,
-                    ]);
-                }
-
-                $attempt++;
+            // 1 = In Queue, 2 = Processing
+            if (!in_array($statusId, [1, 2])) {
+                return $data;
             }
+        }
 
-            return response()->json([
-                'error' => 'Timeout: El código tardó demasiado en ejecutarse',
-                'message' => 'El código excedió el tiempo máximo de ejecución (30 segundos)'
-            ], 408);
+        throw new \Exception('Timeout: el código tardó demasiado en ejecutarse');
+    }
 
-        } catch (\Exception $e) {
-            \Log::error('Exception in runCode', [
-                'message' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
+    /* =========================================================
+     |  EJECUTAR CÓDIGO (botón "Ejecutar")
+     ========================================================= */
+
+    public function runCode(Request $request)
+    {
+        $request->validate([
+            'source_code' => 'required|string',
+            'language_id' => 'required|integer',
+            'stdin' => 'nullable|string',
+        ]);
+
+        try {
+            $response = $this->submitToJudge0([
+                'source_code' => $request->source_code,
+                'language_id' => $request->language_id,
+                'stdin' => $request->stdin ?? '',
             ]);
 
+            if (!$response->successful()) {
+                throw new \Exception('Error al enviar código a Judge0');
+            }
+
+            $token = $response->json()['token'];
+            $result = $this->pollSubmission($token);
+
             return response()->json([
-                'error' => 'Error inesperado',
-                'message' => $e->getMessage()
+                'stdout' => $result['stdout'] ?? null,
+                'stderr' => $result['stderr'] ?? null,
+                'compile_output' => $result['compile_output'] ?? null,
+                'status' => $result['status'] ?? null,
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'error' => $e->getMessage()
             ], 500);
         }
     }
 
+    /* =========================================================
+     |  EJECUTAR UN SOLO TEST
+     ========================================================= */
 
     public function runSingleTest(Request $request)
     {
@@ -113,157 +113,125 @@ class CodeController extends Controller
         ]);
 
         try {
-            $response = Http::withHeaders([
-                'X-RapidAPI-Key' => env('JUDGE_API_KEY'),
-                'X-RapidAPI-Host' => env('JUDGE_API_HOST'),
-                'Content-Type' => 'application/json',
-            ])->post(env('JUDGE_API_URL') . '/submissions?base64_encoded=false&wait=true', [
-                'source_code' => $request->input('source_code'),
-                'language_id' => $request->input('language_id'),
-                'stdin' => $request->input('stdin'),
-            ]);
+            $response = $this->submitToJudge0([
+                'source_code' => $request->source_code,
+                'language_id' => $request->language_id,
+                'stdin' => $request->stdin,
+            ], true);
 
             if (!$response->successful()) {
-                return response()->json([
-                    'success' => false,
-                    'error' => 'Error al ejecutar código',
-                    'details' => $response->body(),
-                ], 500);
+                throw new \Exception('Error al ejecutar el test');
             }
 
             $data = $response->json();
             $output = trim($data['stdout'] ?? '');
-            $expected = trim($request->input('expected_output'));
-            
+            $expected = trim($request->expected_output);
+
             return response()->json([
-                'success' => true,
                 'passed' => $output === $expected,
                 'output' => $output,
                 'expected' => $expected,
                 'stderr' => $data['stderr'] ?? null,
                 'compile_output' => $data['compile_output'] ?? null,
-                'status' => $data['status'] ?? null
+                'status' => $data['status'] ?? null,
             ]);
 
         } catch (\Exception $e) {
             return response()->json([
-                'success' => false,
-                'error' => 'Error al ejecutar test',
-                'message' => $e->getMessage()
+                'error' => $e->getMessage()
             ], 500);
         }
     }
-    
+
+    /* =========================================================
+     |  EJECUTAR TODOS LOS TESTS
+     ========================================================= */
+
     public function runAllTests(Request $request)
     {
         $request->validate([
             'source_code' => 'required|string',
             'language_id' => 'required|integer',
-            'question_id' => 'required|integer'
+            'question_id' => 'required|integer',
         ]);
 
         $question = Question::findOrFail($request->question_id);
-        $unitests = $question->unitests;
+        $tests = $question->unitests;
 
-        if ($unitests->isEmpty()) {
+        if ($tests->isEmpty()) {
             return response()->json([
-                'success' => false,
-                'message' => 'No hay tests para esta pregunta'
-            ]);
+                'error' => 'No hay tests para esta pregunta'
+            ], 400);
         }
 
         $results = [];
         $passed = 0;
-        $failed = 0;
 
-        foreach ($unitests as $index => $unitest) {
+        foreach ($tests as $i => $test) {
             try {
-                $response = Http::withHeaders([
-                    'X-RapidAPI-Key' => env('JUDGE_API_KEY'),
-                    'X-RapidAPI-Host' => env('JUDGE_API_HOST'),
-                    'Content-Type' => 'application/json',
-                ])->post(env('JUDGE_API_URL') . '/submissions?base64_encoded=false&wait=true', [
-                    'source_code' => $request->input('source_code'),
-                    'language_id' => $request->input('language_id'),
-                    'stdin' => $unitest->stdin,
-                ]);
+                $response = $this->submitToJudge0([
+                    'source_code' => $request->source_code,
+                    'language_id' => $request->language_id,
+                    'stdin' => $test->stdin,
+                ], true);
 
                 if (!$response->successful()) {
-                    $failed++;
-                    $results[] = [
-                        'test_number' => $index + 1,
-                        'stdin' => $unitest->stdin,
-                        'expected' => $unitest->expected_output,
-                        'output' => null,
-                        'passed' => false,
-                        'error' => 'Error en la API: ' . $response->body()
-                    ];
-                    continue;
+                    throw new \Exception('Error en Judge0');
                 }
 
                 $data = $response->json();
                 $output = trim($data['stdout'] ?? '');
-                $expected = trim($unitest->expected_output);
-                
-                $isCorrect = $output === $expected;
-                
-                if ($isCorrect) {
-                    $passed++;
-                } else {
-                    $failed++;
-                }
+                $expected = trim($test->expected_output);
+
+                $ok = $output === $expected;
+                if ($ok) $passed++;
 
                 $results[] = [
-                    'test_number' => $index + 1,
-                    'stdin' => $unitest->stdin,
+                    'test' => $i + 1,
+                    'stdin' => $test->stdin,
                     'expected' => $expected,
                     'output' => $output,
-                    'passed' => $isCorrect,
-                    'stderr' => $data['stderr'] ?? null,
-                    'compile_output' => $data['compile_output'] ?? null,
-                    'status' => $data['status']['description'] ?? 'Unknown'
+                    'passed' => $ok,
+                    'status' => $data['status']['description'] ?? null,
                 ];
 
             } catch (\Exception $e) {
-                $failed++;
                 $results[] = [
-                    'test_number' => $index + 1,
-                    'stdin' => $unitest->stdin,
-                    'expected' => $unitest->expected_output,
-                    'output' => null,
+                    'test' => $i + 1,
+                    'stdin' => $test->stdin,
+                    'expected' => $test->expected_output,
                     'passed' => false,
-                    'error' => 'Error al ejecutar test: ' . $e->getMessage()
+                    'error' => $e->getMessage(),
                 ];
             }
         }
 
         return response()->json([
-            'success' => true,
             'summary' => [
-                'total' => count($unitests),
+                'total' => count($tests),
                 'passed' => $passed,
-                'failed' => $failed,
-                'percentage' => round(($passed / count($unitests)) * 100, 2)
+                'failed' => count($tests) - $passed,
+                'percentage' => round(($passed / count($tests)) * 100, 2),
             ],
-            'results' => $results
+            'results' => $results,
         ]);
     }
 
-    public function getScore($sourceCode, $languageId, $questionId)
+    /* =========================================================
+     |  OBTENER SCORE (uso interno)
+     ========================================================= */
+
+    public function getScore(string $sourceCode, int $languageId, int $questionId): float
     {
         $request = new Request([
             'source_code' => $sourceCode,
             'language_id' => $languageId,
-            'question_id' => $questionId
+            'question_id' => $questionId,
         ]);
 
         $response = $this->runAllTests($request);
         $data = $response->getData(true);
 
-        if ($data['success'] ?? false) {
-            return $data['summary']['percentage'];
-        }
-
-        return 0;
+        return $data['summary']['percentage'] ?? 0;
     }
 }
