@@ -10,32 +10,102 @@ class CodeController extends Controller
 {
     public function runCode(Request $request)
     {
-        $response = Http::timeout(90)->withHeaders([
-            'X-RapidAPI-Key' => env('JUDGE_API_KEY'),
-            'X-RapidAPI-Host' => env('JUDGE_API_HOST'),
-            'Content-Type' => 'application/json',
-        ])->post(env('JUDGE_API_URL') . '/submissions?base64_encoded=false&wait=true', [
-            'source_code' => $request->input('source_code'),
-            'language_id' => $request->input('language_id'),
-            'stdin' => $request->input('stdin', ''),
-        ]);
+        try {
+            // Paso 1: Crear submission SIN wait
+            $response = Http::timeout(30)
+                ->withHeaders([
+                    'X-RapidAPI-Key' => env('JUDGE_API_KEY'),
+                    'X-RapidAPI-Host' => env('JUDGE_API_HOST'),
+                    'Content-Type' => 'application/json',
+                ])->post(env('JUDGE_API_URL') . '/submissions?base64_encoded=false', [
+                    'source_code' => $request->input('source_code'),
+                    'language_id' => $request->input('language_id'),
+                    'stdin' => $request->input('stdin', ''),
+                ]);
 
-        if (!$response->successful()) {
+            if (!$response->successful()) {
+                \Log::error('Judge0 submission error', [
+                    'status' => $response->status(),
+                    'body' => $response->body()
+                ]);
+
+                return response()->json([
+                    'error' => 'Error al enviar código',
+                    'details' => $response->body(),
+                ], 500);
+            }
+
+            $submissionData = $response->json();
+            $token = $submissionData['token'];
+
+            \Log::info('Submission created', ['token' => $token]);
+
+            // Paso 2: Poll para obtener resultado
+            $maxAttempts = 15;
+            $attempt = 0;
+            
+            while ($attempt < $maxAttempts) {
+                sleep(2); // Espera 2 segundos entre intentos
+                
+                $resultResponse = Http::timeout(15)
+                    ->withHeaders([
+                        'X-RapidAPI-Key' => env('JUDGE_API_KEY'),
+                        'X-RapidAPI-Host' => env('JUDGE_API_HOST'),
+                    ])->get(env('JUDGE_API_URL') . '/submissions/' . $token . '?base64_encoded=false');
+
+                if (!$resultResponse->successful()) {
+                    \Log::error('Judge0 result error', [
+                        'status' => $resultResponse->status(),
+                        'body' => $resultResponse->body()
+                    ]);
+                    
+                    return response()->json([
+                        'error' => 'Error al obtener resultado',
+                        'details' => $resultResponse->body(),
+                    ], 500);
+                }
+
+                $data = $resultResponse->json();
+                $statusId = $data['status']['id'];
+
+                \Log::info('Polling attempt', [
+                    'attempt' => $attempt + 1,
+                    'status_id' => $statusId,
+                    'status_desc' => $data['status']['description'] ?? 'unknown'
+                ]);
+
+                // Status IDs: 1=In Queue, 2=Processing
+                // Cualquier otro status significa que terminó
+                if (!in_array($statusId, [1, 2])) {
+                    return response()->json([
+                        'stdout' => $data['stdout'] ?? null,
+                        'stderr' => $data['stderr'] ?? null,
+                        'compile_output' => $data['compile_output'] ?? null,
+                        'status' => $data['status'] ?? null,
+                    ]);
+                }
+
+                $attempt++;
+            }
+
             return response()->json([
-                'error' => 'Error al ejecutar código',
-                'details' => $response->body(),
+                'error' => 'Timeout: El código tardó demasiado en ejecutarse',
+                'message' => 'El código excedió el tiempo máximo de ejecución (30 segundos)'
+            ], 408);
+
+        } catch (\Exception $e) {
+            \Log::error('Exception in runCode', [
+                'message' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+
+            return response()->json([
+                'error' => 'Error inesperado',
+                'message' => $e->getMessage()
             ], 500);
         }
-
-        $data = $response->json();
-
-        return response()->json([
-            'stdout' => $data['stdout'] ?? null,
-            'stderr' => $data['stderr'] ?? null,
-            'compile_output' => $data['compile_output'] ?? null,
-            'status' => $data['status'] ?? null,
-        ]);
     }
+
 
     public function runSingleTest(Request $request)
     {
