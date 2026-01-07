@@ -11,7 +11,6 @@ class CodeController extends Controller
     public function runCode(Request $request)
     {
         try {
-            // Paso 1: Crear submission SIN wait
             $response = Http::timeout(30)
                 ->withHeaders([
                     'X-RapidAPI-Key' => env('JUDGE_API_KEY'),
@@ -40,12 +39,11 @@ class CodeController extends Controller
 
             \Log::info('Submission created', ['token' => $token]);
 
-            // Paso 2: Poll para obtener resultado
             $maxAttempts = 15;
             $attempt = 0;
             
             while ($attempt < $maxAttempts) {
-                sleep(2); // Espera 2 segundos entre intentos
+                sleep(2);
                 
                 $resultResponse = Http::timeout(15)
                     ->withHeaders([
@@ -74,8 +72,6 @@ class CodeController extends Controller
                     'status_desc' => $data['status']['description'] ?? 'unknown'
                 ]);
 
-                // Status IDs: 1=In Queue, 2=Processing
-                // Cualquier otro status significa que terminó
                 if (!in_array($statusId, [1, 2])) {
                     return response()->json([
                         'stdout' => $data['stdout'] ?? null,
