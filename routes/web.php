@@ -47,3 +47,25 @@ Route::get('/question/{question_id}/submissions', [SubmissionController::class, 
 Route::get('/question/{question_id}/submissions/{submission_id}', [SubmissionController::class, 'show'])->name('submissions.show');
 
 
+Route::get('/test-judge0', function() {
+    try {
+        $response = Http::withHeaders([
+            'X-RapidAPI-Key' => env('JUDGE_API_KEY'),
+            'X-RapidAPI-Host' => env('JUDGE_API_HOST'),
+        ])->get(env('JUDGE_API_URL') . '/languages');
+
+        return response()->json([
+            'success' => true,
+            'status' => $response->status(),
+            'can_connect' => $response->successful(),
+            'languages_count' => count($response->json() ?? [])
+        ]);
+    } catch (\Exception $e) {
+        return response()->json([
+            'success' => false,
+            'error' => $e->getMessage()
+        ]);
+    }
+});
+
+
