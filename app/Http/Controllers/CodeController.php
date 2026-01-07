@@ -10,7 +10,7 @@ class CodeController extends Controller
 {
     public function runCode(Request $request)
     {
-        $response = Http::withHeaders([
+        $response = Http::timeout(90)->withHeaders([
             'X-RapidAPI-Key' => env('JUDGE_API_KEY'),
             'X-RapidAPI-Host' => env('JUDGE_API_HOST'),
             'Content-Type' => 'application/json',
