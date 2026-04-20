@@ -84,11 +84,10 @@ class SubmissionController extends Controller
     /**
      * Display the specified resource.
      */
-    public function show(string $submission_id, $question_id)
+    public function show(int $question_id, int $submission_id)
     {
-
-        $question = Question::find($question_id);
         $submission = Submission::find($submission_id);
+        $question = Question::find($question_id);
 
         $unitests = UniTest::where('question_id', $question_id)->get();
 

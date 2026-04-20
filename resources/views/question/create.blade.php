@@ -83,6 +83,12 @@
             minimap: { enabled: false }
         });
 
+        // Sync on every change, not just on submit
+        editor.onDidChangeModelContent(function() {
+            document.getElementById('starter_code').value = editor.getValue();
+        });
+
+        // Also sync on submit as a fallback
         document.querySelector('form').addEventListener('submit', function() {
             document.getElementById('starter_code').value = editor.getValue();
         });
