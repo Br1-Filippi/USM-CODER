@@ -8,16 +8,12 @@ use App\Models\Question;
 
 class CodeController extends Controller
 {
-    /* =========================================================
-     |  HELPERS PRIVADOS (Judge0)
-     ========================================================= */
 
     private function submitToJudge0(array $payload, bool $wait = false)
     {
         return Http::timeout(30)
             ->withHeaders([
-                'X-RapidAPI-Key' => env('JUDGE_API_KEY'),
-                'X-RapidAPI-Host' => env('JUDGE_API_HOST'),
+                'X-Auth-Token' => env('JUDGE_API_KEY'),
                 'Content-Type' => 'application/json',
             ])
             ->post(
@@ -31,12 +27,11 @@ class CodeController extends Controller
     private function pollSubmission(string $token, int $maxAttempts = 15)
     {
         for ($i = 0; $i < $maxAttempts; $i++) {
-            sleep(2);
+            sleep(1); 
 
             $response = Http::timeout(15)
                 ->withHeaders([
-                    'X-RapidAPI-Key' => env('JUDGE_API_KEY'),
-                    'X-RapidAPI-Host' => env('JUDGE_API_HOST'),
+                    'X-Auth-Token' => env('JUDGE_API_KEY'),
                 ])
                 ->get(
                     env('JUDGE_API_URL')
@@ -50,7 +45,6 @@ class CodeController extends Controller
             $data = $response->json();
             $statusId = $data['status']['id'] ?? null;
 
-            // 1 = In Queue, 2 = Processing
             if (!in_array($statusId, [1, 2])) {
                 return $data;
             }
@@ -58,10 +52,6 @@ class CodeController extends Controller
 
         throw new \Exception('Timeout: el código tardó demasiado en ejecutarse');
     }
-
-    /* =========================================================
-     |  EJECUTAR CÓDIGO (botón "Ejecutar")
-     ========================================================= */
 
     public function runCode(Request $request)
     {
@@ -79,7 +69,7 @@ class CodeController extends Controller
             ]);
 
             if (!$response->successful()) {
-                throw new \Exception('Error al enviar código a Judge0');
+                throw new \Exception('Error al enviar código a Judge0. Status: ' . $response->status());
             }
 
             $token = $response->json()['token'];
@@ -98,10 +88,6 @@ class CodeController extends Controller
             ], 500);
         }
     }
-
-    /* =========================================================
-     |  EJECUTAR UN SOLO TEST
-     ========================================================= */
 
     public function runSingleTest(Request $request)
     {
@@ -145,7 +131,7 @@ class CodeController extends Controller
 
     /* =========================================================
      |  EJECUTAR TODOS LOS TESTS
-     ========================================================= */
+     | ========================================================= */
 
     public function runAllTests(Request $request)
     {
@@ -211,15 +197,11 @@ class CodeController extends Controller
                 'total' => count($tests),
                 'passed' => $passed,
                 'failed' => count($tests) - $passed,
-                'percentage' => round(($passed / count($tests)) * 100, 2),
+                'percentage' => count($tests) > 0 ? round(($passed / count($tests)) * 100, 2) : 0,
             ],
             'results' => $results,
         ]);
     }
-
-    /* =========================================================
-     |  OBTENER SCORE (uso interno)
-     ========================================================= */
 
     public function getScore(string $sourceCode, int $languageId, int $questionId): float
     {
