@@ -22,6 +22,23 @@
                 Enviar Respuesta
             </button>
         </div>
+        <div class="d-flex justify-content-between align-items-center py-2 border-bottom bg-white">
+            <div>
+                @if($previousQuestion)
+                    <a href="{{ route('questions.show', ['test_id' => $test_id, 'question_id' => $previousQuestion->id]) }}" class="btn btn-sm btn-outline-secondary">
+                        ← Pregunta Anterior
+                    </a>
+                @endif
+            </div>
+
+            <div>
+                @if($nextQuestion)
+                    <a href="{{ route('questions.show', ['test_id' => $test_id, 'question_id' => $nextQuestion->id]) }}" class="btn btn-sm btn-outline-primary">
+                        Siguiente Pregunta→
+                    </a>
+                @endif
+            </div>
+        </div>
     </div>
 
     <div class="flex-grow-1 d-flex flex-column">

@@ -61,9 +61,15 @@ class QuestionController extends Controller
      */
     public function show($test_id, $question_id)
     {
-        $question = Question::find($question_id);
+        $question = Question::findOrFail($question_id);
 
-        return view('question.show', compact('question', 'test_id'));
+        $previousQuestion = Question::find($question->id - 1); 
+        $nextQuestion = Question::find($question->id + 1);
+
+        // dd($question, $previousQuestion, $nextQuestion);
+
+
+        return view('question.show', compact('question', 'test_id', 'previousQuestion', 'nextQuestion'));
     }
 
     /**
