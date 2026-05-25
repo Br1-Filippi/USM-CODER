@@ -74,18 +74,11 @@ class UserController extends Controller
 
     public function login(LoginRequest $request)
     {
-        $credentials = $request->validated();
+        $request->authenticate();
 
-        if (Auth::attempt($credentials)) {
-            $request->session()->regenerate();
+        $request->session()->regenerate();
 
-            $user = Auth::user();
-            $tests = Test::all();
-
-            return redirect()->route('landing');
-        }
-
-        return back()->withErrors();
+        return redirect()->route('landing');
     }
 
     public function registerForm()
