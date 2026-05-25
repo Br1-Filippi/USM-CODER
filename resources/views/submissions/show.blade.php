@@ -231,7 +231,7 @@ document.querySelectorAll('.run-single-test').forEach(btn => {
 
             const data = await response.json();
 
-            if (data.success) {
+            if (data.passed) {
                 if (data.passed) {
                     resultSpan.textContent = `Correcto (${data.output})`;
                     resultSpan.classList.add('success');
