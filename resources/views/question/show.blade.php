@@ -138,7 +138,7 @@ document.getElementById('sendAnswer').addEventListener('click', async () => {
                 'X-CSRF-TOKEN': '{{ csrf_token() }}',
             },
             body: JSON.stringify({
-                code: code,
+                source_code: code,
                 language_id: {{ $question->language_id ?? 71 }} 
             }),
         });
