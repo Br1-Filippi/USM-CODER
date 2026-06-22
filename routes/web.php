@@ -38,11 +38,7 @@ Route::middleware(['check.auth'])->group(function () {
     //Question Routes
     Route::get('/test/{test}/questions/create', [QuestionController::class, 'create'])->name('questions.create');   
     Route::post('/test/{test_id}/questions/store', [QuestionController::class, 'store'])->name('questions.store');
-    // cross-origin-isolation: habilita SharedArrayBuffer para la consola
-    // interactiva (Pyodide). Inofensivo para preguntas en modo clásico.
-    Route::get('/test/{test_id}/question/{question_id}', [QuestionController::class, 'show'])
-        ->middleware('cross-origin-isolation')
-        ->name('questions.show');
+    Route::get('/test/{test_id}/question/{question_id}', [QuestionController::class, 'show'])->name('questions.show');
 
 
     //code excetution routes
@@ -58,16 +54,22 @@ Route::middleware(['check.auth'])->group(function () {
 });
 
 
-// Worker del runtime interactivo (Pyodide). Servido por ruta —no desde
-// public/— para que el middleware cross-origin-isolation le ponga el header
-// COEP: una página cross-origin-isolated solo puede lanzar un worker cuyo
-// script de respuesta también lo lleve.
+// Phase 0 spike: in-browser interactive Python runner (Pyodide worker).
+// Throwaway page to de-risk blocking input() + SharedArrayBuffer. Not wired
+// into the real playground yet. The worker is served via a route (not from
+// public/) so the cross-origin-isolation middleware can stamp it with a COEP
+// header — a cross-origin-isolated page may only spawn a worker whose script
+// response also carries COEP.
 Route::middleware('cross-origin-isolation')->group(function () {
-    Route::get('/runtime/python-worker.js', function () {
-        return response(file_get_contents(resource_path('runtime/python-worker.js')))
+    Route::get('/spike/python', function () {
+        return view('spike.python');
+    })->name('spike.python');
+
+    Route::get('/spike/python-worker.js', function () {
+        return response(file_get_contents(resource_path('spike/python-worker.js')))
             ->header('Content-Type', 'application/javascript')
             ->header('Cache-Control', 'no-store, no-cache, must-revalidate');
-    })->name('runtime.python-worker');
+    });
 });
 
 
