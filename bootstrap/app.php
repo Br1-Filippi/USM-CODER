@@ -13,6 +13,7 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->alias([
             'check.auth' => \App\Http\Middleware\CheckAuth::class,
+            'cross-origin-isolation' => \App\Http\Middleware\CrossOriginIsolation::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

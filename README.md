@@ -1,61 +1,149 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# USM-CODER
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+Plataforma de exámenes de programación tipo LeetCode para cursos universitarios.
+Los profesores crean pruebas con preguntas de programación; los estudiantes las
+resuelven en un editor dentro del navegador; el código se evalúa automáticamente
+contra tests unitarios ocultos. Las pruebas pueden bloquearse con **Safe Exam
+Browser (SEB)**.
 
-## About Laravel
+> Construido con Laravel 12. La interfaz está en español.
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+---
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+## Características
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+- **Cursos y roles** — carreras → cursos → pruebas, con tres roles de usuario
+  (`alumno` / `profesor` / `admin`).
+- **Preguntas de programación** — cada pregunta tiene un lenguaje, una plantilla
+  inicial y un conjunto de tests unitarios (pares stdin / salida esperada).
+- **Evaluación automática** — las entregas de los estudiantes se ejecutan contra
+  los tests unitarios mediante [Judge0](https://judge0.com); el puntaje es el
+  porcentaje de tests aprobados.
+- **Experiencia en el editor** — editor Monaco con consola de ejecución.
+- **Safe Exam Browser** — genera un archivo de configuración `.seb` para rendir
+  una prueba en modo kiosco bloqueado.
+- **Ejecutor interactivo en el navegador** *(experimental — Fase 0)* — ejecuta
+  Python completamente en el navegador (Pyodide + Web Worker) con un `input()`
+  real y bloqueante y un sistema de archivos virtual, para práctica/aprendizaje
+  sin pasar por el servidor.
 
-## Learning Laravel
+---
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework.
+## Stack tecnológico
 
-You may also try the [Laravel Bootcamp](https://bootcamp.laravel.com), where you will be guided through building a modern Laravel application from scratch.
+| Área | Herramientas |
+|------|--------------|
+| Backend | PHP 8.2+, Laravel 12 |
+| Base de datos | MySQL |
+| Build del frontend | Vite |
+| Interfaz | Bootstrap 5, Tailwind 4, editor Monaco |
+| Ejecución de código (evaluación) | Judge0 (self-hosted o RapidAPI) |
+| Ejecutor en el navegador | Pyodide, xterm.js, Web Workers, SharedArrayBuffer |
 
-If you don't feel like reading, [Laracasts](https://laracasts.com) can help. Laracasts contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+---
 
-## Laravel Sponsors
+## Requisitos
 
-We would like to extend our thanks to the following sponsors for funding Laravel development. If you are interested in becoming a sponsor, please visit the [Laravel Partners program](https://partners.laravel.com).
+- PHP **8.2+** con Composer
+- Node.js **18+** y npm
+- MySQL
+- Un endpoint de Judge0 — una instancia self-hosted o una clave de
+  [RapidAPI](https://rapidapi.com/judge0-official/api/judge0-ce)
 
-### Premium Partners
+---
 
-- **[Vehikl](https://vehikl.com)**
-- **[Tighten Co.](https://tighten.co)**
-- **[Kirschbaum Development Group](https://kirschbaumdevelopment.com)**
-- **[64 Robots](https://64robots.com)**
-- **[Curotec](https://www.curotec.com/services/technologies/laravel)**
-- **[DevSquad](https://devsquad.com/hire-laravel-developers)**
-- **[Redberry](https://redberry.international/laravel-development)**
-- **[Active Logic](https://activelogic.com)**
+## Puesta en marcha
 
-## Contributing
+```bash
+# 1. Instalar dependencias
+composer install
+npm install
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+# 2. Entorno
+cp .env.example .env
+php artisan key:generate
 
-## Code of Conduct
+# 3. Configurar el .env (ver abajo), crear la base de datos y migrar
+php artisan migrate
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+# 4. Levantar todo (servidor + cola + logs + Vite) con un solo comando
+composer dev
+```
 
-## Security Vulnerabilities
+`composer dev` levanta el servidor PHP, el worker de la cola, el visor de logs
+(Pail) y el servidor de desarrollo de Vite a la vez. ¿Prefieres separarlos?
+Ejecuta `php artisan serve` y `npm run dev` en dos terminales.
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+### Variables de entorno
 
-## License
+Base de datos (por defecto MySQL):
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+```env
+DB_CONNECTION=mysql
+DB_HOST=127.0.0.1
+DB_PORT=3306
+DB_DATABASE=usm_leet_code
+DB_USERNAME=tu_usuario
+DB_PASSWORD=tu_password
+```
+
+Judge0 — los valores dependen de si usas una instancia self-hosted o RapidAPI:
+
+```env
+# Judge0 self-hosted
+JUDGE_API_URL=http://localhost:2358
+JUDGE_API_KEY=tu_token           # se envía como X-Auth-Token
+
+# Judge0 CE en RapidAPI
+JUDGE_API_URL=https://judge0-ce.p.rapidapi.com
+JUDGE_API_KEY=tu_clave_rapidapi  # se envía como X-RapidAPI-Key
+JUDGE_API_HOST=judge0-ce.p.rapidapi.com
+```
+
+Puedes verificar la conexión en `GET /test-judge0`, que consulta el endpoint
+`/languages` de Judge0.
+
+---
+
+## Tests
+
+```bash
+composer test                                   # suite completa (PHPUnit)
+php artisan test --filter nombre_del_test       # un solo test
+php artisan test tests/Feature/ExampleTest.php  # un solo archivo
+php artisan test --testsuite=Unit               # una suite (Unit | Feature)
+```
+
+Los tests corren contra una base de datos SQLite en memoria (configurada en
+`phpunit.xml`).
+
+---
+
+## Notas de arquitectura
+
+**Roles.** La autenticación es personalizada (no usa el scaffolding de Laravel).
+El enum `users.tipo` (`alumno` / `profesor` / `admin`) gobierna la autorización,
+y las filas de rol (`Student` / `Profesor` / `Admin`) comparten la misma llave
+primaria que su `User`. La protección de rutas usa el middleware `check.auth`;
+las verificaciones de rol por acción viven dentro de los controladores.
+
+**Modelo de dominio.** `Career → Course → Test → Question → UniTest`, más
+`Submission`. Una pregunta referencia su lenguaje mediante `lenguaje_id` y posee
+sus tests unitarios (`stdin` + `expected_output`).
+
+**Evaluación.** `CodeController` envía el código a Judge0 y compara
+`trim(stdout) === trim(expected_output)` por cada test unitario.
+`SubmissionController` guarda el porcentaje resultante como puntaje de la entrega.
+
+**Ejecutor en el navegador (experimental).** Una prueba de concepto temporal
+vive en `GET /spike/python`. Ejecuta Python en un Web Worker mediante Pyodide,
+con un `input()` bloqueante implementado sobre `SharedArrayBuffer` + `Atomics` y
+una terminal xterm.js. Requiere aislamiento de origen cruzado, por lo que el
+middleware `cross-origin-isolation` envía las cabeceras
+`Cross-Origin-Opener-Policy` / `Cross-Origin-Embedder-Policy` en esas rutas.
+
+---
+
+## Licencia
+
+MIT.

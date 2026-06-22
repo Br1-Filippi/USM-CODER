@@ -28,7 +28,10 @@
                     <select class="form-select mb-3" id="language" name="language" required>
                         <option value="" disabled selected>Selecciona un lenguaje</option>
                         @foreach ($lenguajes as $lenguaje)
-                            <option value="{{ $lenguaje->id }}">{{ $lenguaje->name }}</option>
+                            <option value="{{ $lenguaje->id }}|judge0">{{ $lenguaje->name }}</option>
+                            @if (strtolower($lenguaje->name) === 'python')
+                                <option value="{{ $lenguaje->id }}|interactive">{{ $lenguaje->name }} interactivo</option>
+                            @endif
                         @endforeach
                     </select>
 

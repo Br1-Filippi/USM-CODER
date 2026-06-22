@@ -38,7 +38,11 @@ Route::middleware(['check.auth'])->group(function () {
     //Question Routes
     Route::get('/test/{test}/questions/create', [QuestionController::class, 'create'])->name('questions.create');   
     Route::post('/test/{test_id}/questions/store', [QuestionController::class, 'store'])->name('questions.store');
-    Route::get('/test/{test_id}/question/{question_id}', [QuestionController::class, 'show'])->name('questions.show');
+    // cross-origin-isolation: habilita SharedArrayBuffer para la consola
+    // interactiva (Pyodide). Inofensivo para preguntas en modo clásico.
+    Route::get('/test/{test_id}/question/{question_id}', [QuestionController::class, 'show'])
+        ->middleware('cross-origin-isolation')
+        ->name('questions.show');
 
 
     //code excetution routes
@@ -51,6 +55,19 @@ Route::middleware(['check.auth'])->group(function () {
     Route::get('/question/{question_id}/submissions', [SubmissionController::class, 'index'])->name('submissions.index');
     Route::get('/question/{question_id}/submissions/{submission_id}', [SubmissionController::class, 'show'])->name('submissions.show');
 
+});
+
+
+// Worker del runtime interactivo (Pyodide). Servido por ruta —no desde
+// public/— para que el middleware cross-origin-isolation le ponga el header
+// COEP: una página cross-origin-isolated solo puede lanzar un worker cuyo
+// script de respuesta también lo lleve.
+Route::middleware('cross-origin-isolation')->group(function () {
+    Route::get('/runtime/python-worker.js', function () {
+        return response(file_get_contents(resource_path('runtime/python-worker.js')))
+            ->header('Content-Type', 'application/javascript')
+            ->header('Cache-Control', 'no-store, no-cache, must-revalidate');
+    })->name('runtime.python-worker');
 });
 
 
