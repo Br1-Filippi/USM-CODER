@@ -1,0 +1,29 @@
+# Configuración de Judge0 para docker-compose.
+# setup.sh copia este archivo a docker/judge0/judge0.conf y rellena los
+# valores __GENERAR__ con secretos aleatorios. NO subir judge0.conf a git.
+
+# --- Redis ---
+REDIS_HOST=judge0-redis
+REDIS_PORT=6379
+REDIS_PASSWORD=__GENERAR__
+
+# --- PostgreSQL ---
+POSTGRES_HOST=judge0-db
+POSTGRES_PORT=5432
+POSTGRES_DB=judge0
+POSTGRES_USER=judge0
+POSTGRES_PASSWORD=__GENERAR__
+
+# --- Autenticación de la API ---
+# La app Laravel manda este token en la cabecera X-Auth-Token
+# (debe coincidir con JUDGE_API_KEY del .env de Laravel).
+AUTHN_HEADER=X-Auth-Token
+AUTHN_TOKEN=__GENERAR__
+
+# --- Límites razonables para un servidor de exámenes ---
+ENABLE_WAIT_RESULT=true
+MAX_QUEUE_SIZE=200
+CPU_TIME_LIMIT=5
+MAX_CPU_TIME_LIMIT=15
+WALL_TIME_LIMIT=10
+MAX_WALL_TIME_LIMIT=20
