@@ -119,7 +119,9 @@ docker compose build
 # APP_KEY (solo si falta)
 if grep -q '^APP_KEY=$' .env; then
     log "Generando APP_KEY..."
-    docker compose run --rm --no-deps app su-exec www-data php artisan key:generate --force
+    # Como root dentro del contenedor: .env es un bind mount del host
+    # (dueño: $REAL_USER) y www-data no puede escribirlo.
+    docker compose run --rm --no-deps app php artisan key:generate --force
 fi
 
 log "Levantando servicios..."
