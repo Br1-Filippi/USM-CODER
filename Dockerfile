@@ -11,8 +11,12 @@ RUN npm run build
 
 # ---------------------------------------------------------------
 # Etapa 2: dependencias PHP (sin dev, sin scripts todavía)
+# Corre sobre PHP 8.2 (igual que la app): la imagen composer:2 trae
+# PHP 8.5 y el lock (nette/schema) exige php 8.1-8.4.
 # ---------------------------------------------------------------
-FROM composer:2 AS vendor
+FROM php:8.2-cli-alpine AS vendor
+RUN apk add --no-cache git unzip
+COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 WORKDIR /app
 COPY composer.json composer.lock ./
 RUN composer install --no-dev --no-interaction --no-scripts --no-autoloader --prefer-dist
