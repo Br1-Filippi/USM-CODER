@@ -1,0 +1,100 @@
+services:
+  # ---------------- Aplicación Laravel ----------------
+  app:
+    build:
+      context: .
+      target: app
+    restart: unless-stopped
+    volumes:
+      - ./.env:/var/www/.env
+      - ./database:/var/www/database
+      - ./storage:/var/www/storage
+    depends_on:
+      judge0-server:
+        condition: service_started
+    networks: [usm]
+
+  queue:
+    build:
+      context: .
+      target: app
+    restart: unless-stopped
+    command: ["sh", "-c", "sleep 10 && exec su-exec www-data php artisan queue:work --tries=3 --timeout=90"]
+    volumes:
+      - ./.env:/var/www/.env
+      - ./database:/var/www/database
+      - ./storage:/var/www/storage
+    depends_on:
+      app:
+        condition: service_started
+    networks: [usm]
+
+  web:
+    build:
+      context: .
+      target: web
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    depends_on:
+      app:
+        condition: service_started
+    networks: [usm]
+
+  # ---------------- Judge0 ----------------
+  # Imagen oficial. Los workers necesitan "privileged" para el sandboxing
+  # (isolate). El host debe arrancar con cgroup v1 (ver setup.sh).
+  judge0-server:
+    image: judge0/judge0:1.13.1
+    restart: unless-stopped
+    env_file: docker/judge0/judge0.conf
+    # Expuesto solo en localhost del host para depuración; la app le habla
+    # por la red interna de Docker (http://judge0-server:2358).
+    ports:
+      - "127.0.0.1:2358:2358"
+    privileged: true
+    depends_on:
+      judge0-db:
+        condition: service_healthy
+      judge0-redis:
+        condition: service_started
+    networks: [usm]
+
+  judge0-workers:
+    image: judge0/judge0:1.13.1
+    restart: unless-stopped
+    command: ["./scripts/workers"]
+    env_file: docker/judge0/judge0.conf
+    privileged: true
+    depends_on:
+      judge0-db:
+        condition: service_healthy
+      judge0-redis:
+        condition: service_started
+    networks: [usm]
+
+  judge0-db:
+    image: postgres:16.2
+    restart: unless-stopped
+    env_file: docker/judge0/judge0.conf
+    volumes:
+      - judge0-db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U judge0"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    networks: [usm]
+
+  judge0-redis:
+    image: redis:7.2.4
+    restart: unless-stopped
+    command: ["bash", "-c", "docker-entrypoint.sh --appendonly no --requirepass \"$$REDIS_PASSWORD\""]
+    env_file: docker/judge0/judge0.conf
+    networks: [usm]
+
+volumes:
+  judge0-db-data:
+
+networks:
+  usm:

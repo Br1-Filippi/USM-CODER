@@ -22,3 +22,6 @@
 Homestead.json
 Homestead.yaml
 Thumbs.db
+
+# Docker deployment
+/docker/judge0/judge0.conf
