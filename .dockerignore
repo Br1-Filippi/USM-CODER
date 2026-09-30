@@ -16,7 +16,6 @@ database/*.sqlite-shm
 .env
 .env.*
 !.env.example
-docker/judge0/judge0.conf
 tests
 .phpunit.cache
 .phpunit.result.cache

@@ -1,10 +1,63 @@
+# Stack completo de USM-CODER: Laravel + Judge0.
+#
+#   cp .env.example .env     # editar APP_URL y los secretos
+#   docker compose up -d
+#
+# No hay script de instalación: toda la configuración vive en el .env y en
+# este archivo. Lo único que hay que hacer a mano en el servidor (una vez)
+# es instalar Docker y arrancar el kernel en cgroup v1; ver el README.
+
+# ------------------------------------------------------------------
+# Variables que el stack impone sobre el .env montado.
+#
+# OJO: Laravel carga el .env en modo "immutable" (Illuminate\Support\Env
+# usa RepositoryBuilder->immutable()), así que una variable real del
+# entorno —las de aquí— GANA sobre la línea equivalente del .env. Eso es
+# a propósito: el mismo .env sirve para desarrollo local (Judge0 en
+# localhost) y para este stack (Judge0 en la red interna de Docker) sin
+# tener que editarlo.
+# ------------------------------------------------------------------
+x-app-env: &app-env
+  APP_ENV: production
+  APP_DEBUG: "false"
+  # Dentro de la red de Docker Judge0 se llama así. El JUDGE_API_URL del
+  # .env (pensado para `composer dev`) queda ignorado dentro del contenedor.
+  JUDGE_API_URL: http://judge0-server:2358
+  JUDGE_API_HOST: judge0-server
+  # La misma clave alimenta AUTHN_TOKEN de Judge0 más abajo, así que no
+  # pueden desincronizarse (era la causa clásica de los 401).
+  JUDGE_API_KEY: "${JUDGE_API_KEY:?falta JUDGE_API_KEY en .env (copiar .env.example)}"
+
+x-judge0-env: &judge0-env
+  REDIS_HOST: judge0-redis
+  REDIS_PORT: "6379"
+  REDIS_PASSWORD: "${JUDGE0_REDIS_PASSWORD:?falta JUDGE0_REDIS_PASSWORD en .env (copiar .env.example)}"
+  POSTGRES_HOST: judge0-db
+  POSTGRES_PORT: "5432"
+  POSTGRES_DB: judge0
+  POSTGRES_USER: judge0
+  POSTGRES_PASSWORD: "${JUDGE0_DB_PASSWORD:?falta JUDGE0_DB_PASSWORD en .env (copiar .env.example)}"
+  # La app Laravel manda este token en la cabecera X-Auth-Token.
+  AUTHN_HEADER: X-Auth-Token
+  AUTHN_TOKEN: "${JUDGE_API_KEY:?falta JUDGE_API_KEY en .env (copiar .env.example)}"
+  # Límites razonables para un servidor de exámenes
+  ENABLE_WAIT_RESULT: "true"
+  MAX_QUEUE_SIZE: "200"
+  CPU_TIME_LIMIT: "5"
+  MAX_CPU_TIME_LIMIT: "15"
+  WALL_TIME_LIMIT: "10"
+  MAX_WALL_TIME_LIMIT: "20"
+
 services:
   # ---------------- Aplicación Laravel ----------------
+  # El entrypoint crea la BD SQLite si falta, genera APP_KEY la primera vez
+  # y corre las migraciones. Por eso no hace falta ningún paso previo.
   app:
     build:
       context: .
       target: app
     restart: unless-stopped
+    environment: *app-env
     volumes:
       - ./.env:/var/www/.env
       - ./database:/var/www/database
@@ -19,7 +72,10 @@ services:
       context: .
       target: app
     restart: unless-stopped
+    # El sleep le da tiempo al contenedor "app" a escribir APP_KEY y correr
+    # las migraciones antes de que el worker toque la BD.
     command: ["sh", "-c", "sleep 10 && exec su-exec www-data php artisan queue:work --tries=3 --timeout=90"]
+    environment: *app-env
     volumes:
       - ./.env:/var/www/.env
       - ./database:/var/www/database
@@ -43,11 +99,11 @@ services:
 
   # ---------------- Judge0 ----------------
   # Imagen oficial. Los workers necesitan "privileged" para el sandboxing
-  # (isolate). El host debe arrancar con cgroup v1 (ver setup.sh).
+  # (isolate). El host debe arrancar con cgroup v1 (ver el README).
   judge0-server:
     image: judge0/judge0:1.13.1
     restart: unless-stopped
-    env_file: docker/judge0/judge0.conf
+    environment: *judge0-env
     # Expuesto solo en localhost del host para depuración; la app le habla
     # por la red interna de Docker (http://judge0-server:2358).
     ports:
@@ -64,7 +120,7 @@ services:
     image: judge0/judge0:1.13.1
     restart: unless-stopped
     command: ["./scripts/workers"]
-    env_file: docker/judge0/judge0.conf
+    environment: *judge0-env
     privileged: true
     depends_on:
       judge0-db:
@@ -76,7 +132,10 @@ services:
   judge0-db:
     image: postgres:16.2
     restart: unless-stopped
-    env_file: docker/judge0/judge0.conf
+    environment:
+      POSTGRES_DB: judge0
+      POSTGRES_USER: judge0
+      POSTGRES_PASSWORD: "${JUDGE0_DB_PASSWORD:?falta JUDGE0_DB_PASSWORD en .env (copiar .env.example)}"
     volumes:
       - judge0-db-data:/var/lib/postgresql/data
     healthcheck:
@@ -90,7 +149,8 @@ services:
     image: redis:7.2.4
     restart: unless-stopped
     command: ["bash", "-c", "docker-entrypoint.sh --appendonly no --requirepass \"$$REDIS_PASSWORD\""]
-    env_file: docker/judge0/judge0.conf
+    environment:
+      REDIS_PASSWORD: "${JUDGE0_REDIS_PASSWORD:?falta JUDGE0_REDIS_PASSWORD en .env (copiar .env.example)}"
     networks: [usm]
 
 volumes:
