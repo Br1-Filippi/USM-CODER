@@ -105,6 +105,84 @@ Puedes verificar la conexión en `GET /test-judge0`, que consulta el endpoint
 
 ---
 
+## Despliegue con Docker
+
+Todo el stack —Laravel, Nginx, Judge0, PostgreSQL y Redis— corre con un solo
+`docker-compose.yml`. En el despliegue la base de datos es SQLite, no MySQL.
+
+**1. Preparar el host (una sola vez).** Es lo único que no puede hacer un
+contenedor:
+
+```bash
+# a) Judge0 (isolate) necesita cgroup v1; Ubuntu 22.04 arranca en v2.
+#    Comprobar con: stat -fc %T /sys/fs/cgroup   ("cgroup2fs" = v2)
+echo 'GRUB_CMDLINE_LINUX_DEFAULT="$GRUB_CMDLINE_LINUX_DEFAULT systemd.unified_cgroup_hierarchy=0"' \
+  | sudo tee /etc/default/grub.d/99-judge0-cgroup-v1.cfg
+sudo update-grub && sudo reboot      # tras reiniciar debe decir "tmpfs"
+
+# b) Docker + Compose
+curl -fsSL https://get.docker.com | sudo sh
+sudo usermod -aG docker "$USER"      # cerrar sesión y volver a entrar
+```
+
+**2. Instalar.**
+
+```bash
+git clone <url-del-repo> USM-CODER
+cd USM-CODER
+cp .env.example .env
+nano .env                            # APP_URL + los tres secretos
+docker compose up -d
+```
+
+El contenedor `app` hace el resto al arrancar: crea la BD SQLite si falta,
+genera `APP_KEY` si el `.env` no la trae y corre las migraciones.
+
+Hay que tocar `APP_URL` y tres secretos (`openssl rand -hex 24`; solo
+hexadecimal, porque compose interpola el `.env` y se comería un `$`):
+
+| Variable | Para qué |
+|---|---|
+| `JUDGE_API_KEY` | Token compartido. Compose se lo pasa a Judge0 como `AUTHN_TOKEN`, así que no pueden desincronizarse. |
+| `JUDGE0_DB_PASSWORD` | PostgreSQL de Judge0 (solo red interna). |
+| `JUDGE0_REDIS_PASSWORD` | Redis de Judge0 (solo red interna). |
+
+**3. Verificar y operar.**
+
+```bash
+docker compose ps                    # los 7 servicios en "running"
+
+# Judge0 pide el token incluso en /about; sin la cabecera devuelve 401
+curl -H "X-Auth-Token: $(grep '^JUDGE_API_KEY=' .env | cut -d= -f2-)" \
+  http://127.0.0.1:2358/about
+
+docker compose logs -f app                  # logs de Laravel
+git pull && docker compose up -d --build    # actualizar; --build es obligatorio
+```
+
+No hay despliegue automático: se actualiza a mano con ese último comando.
+Respaldar `database/database.sqlite` y el `.env`, que lleva `APP_KEY` y los
+secretos.
+
+### Detalles que cuesta descubrir solo
+
+- **El entorno del contenedor gana sobre el `.env`.** Laravel lo carga en modo
+  *immutable*, y `docker-compose.yml` impone `APP_ENV=production`,
+  `APP_DEBUG=false` y `JUDGE_API_URL=http://judge0-server:2358` dentro de los
+  contenedores. Por eso el mismo `.env` sirve para `composer dev` y para el
+  stack sin editarlo.
+- **Nunca `php artisan config:cache`.** `CodeController` lee las variables de
+  Judge0 con `env()`; con la config cacheada devuelven null. Si ya pasó:
+  `docker compose exec app php artisan config:clear`.
+- **Las cabeceras COOP/COEP las manda solo Laravel** (middleware
+  `cross-origin-isolation`, COEP `credentialless`). Si un proxy delante agrega
+  otra, `crossOriginIsolated` pasa a `false` y muere el runner interactivo.
+- **Entregas atascadas en "Processing"** = el host volvió a cgroup v2.
+- **Cambiar `JUDGE0_DB_PASSWORD`** no basta por sí solo: la clave se fija al
+  crear el volumen. `docker compose down && docker volume rm usm-coder_judge0-db-data`.
+
+---
+
 ## Tests
 
 ```bash
