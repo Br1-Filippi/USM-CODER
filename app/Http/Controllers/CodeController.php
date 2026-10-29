@@ -166,6 +166,11 @@ class CodeController extends Controller
                 }
 
                 $data = $response->json();
+                // 1-2: no terminó; 13: falla interna de Judge0. No es culpa del alumno.
+                if (in_array($data['status']['id'] ?? null, [null, 1, 2, 13], true)) {
+                    throw new \Exception('Judge0 no pudo evaluar: ' . ($data['status']['description'] ?? 'sin estado'));
+                }
+
                 $output = trim($data['stdout'] ?? '');
                 $expected = trim($test->expected_output);
 
@@ -214,6 +219,11 @@ class CodeController extends Controller
         $response = $this->runAllTests($request);
         $data = $response->getData(true);
 
-        return $data['summary']['percentage'] ?? 0;
+        // Sin evaluación completa no hay nota: el alumno reintenta en vez de quedar con un puntaje falso.
+        if ($response->status() !== 200 || collect($data['results'])->contains(fn ($r) => isset($r['error']))) {
+            throw new \Exception($data['error'] ?? 'Judge0 no pudo evaluar el código, envíalo de nuevo');
+        }
+
+        return $data['summary']['percentage'];
     }
 }
