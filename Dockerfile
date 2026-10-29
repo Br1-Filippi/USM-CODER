@@ -31,6 +31,8 @@ RUN apk add --no-cache su-exec \
     && docker-php-ext-install pcntl bcmath opcache
 
 COPY docker/php/php.ini /usr/local/etc/php/conf.d/99-usm-coder.ini
+# "zz-" para cargar después del zz-docker.conf de la imagen y sobreescribirlo.
+COPY docker/php/www.conf /usr/local/etc/php-fpm.d/zz-usm-coder.conf
 
 COPY --from=vendor /app/vendor ./vendor
 COPY . .

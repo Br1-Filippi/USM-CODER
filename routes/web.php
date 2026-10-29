@@ -18,7 +18,7 @@ use App\Http\Controllers\SebController;
 //Public Routes
 Route::get('/', [HomeController::class, 'index'])->name('home');
 Route::get('/loginForm', [UserController::class, 'loginForm'])->name('loginForm');
-Route::post('/login', [UserController::class, 'login'])->name('login');
+Route::post('/login', [UserController::class, 'login'])->middleware('throttle:login')->name('login');
 Route::post('/logout', [UserController::class, 'logout'])->name('logout');
 Route::get('/registerForm', [UserController::class, 'registerForm'])->name('registerForm');
 
