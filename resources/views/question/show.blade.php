@@ -92,7 +92,7 @@ Si tienes mas de un input van en orden de aparicion separados por saltos de line
 
 <script>
 (function () {
-    const starterCode = `{!! addslashes($question->starting_code ?? '// Responde aca tu pregunta!!') !!}`;
+    const starterCode = @json($question->starting_code ?? '// Responde aca tu pregunta!!');
 
     window.require.config({ paths: { vs: 'https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.45.0/min/vs' }});
     window.require(['vs/editor/editor.main'], function () {

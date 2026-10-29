@@ -143,7 +143,7 @@
 
 <script>
 (function () {
-    const starterCode = `{!! addslashes($submission->code ?? '// No hay código para esta submission...') !!}`;
+    const starterCode = @json($submission->code ?? '// No hay código para esta submission...');
 
     window.require.config({ paths: { vs: 'https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.45.0/min/vs' }});
     window.require(['vs/editor/editor.main'], function () {
