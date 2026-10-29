@@ -31,13 +31,13 @@ Route::middleware(['check.auth'])->group(function () {
     Route::resource('tests', TestController::class);
 
     //Safe exam Browser 
-    Route::get('/tests/{test}/seb-config', [SebController::class, 'show'])->name('seb.config');
-    Route::post('/tests/{test}/seb/download', [SebController::class, 'download'])->name('seb.download');
+    Route::get('/tests/{test}/seb-config', [SebController::class, 'show'])->middleware('can:teacher-admin')->name('seb.config');
+    Route::post('/tests/{test}/seb/download', [SebController::class, 'download'])->middleware('can:teacher-admin')->name('seb.download');
 
 
     //Question Routes
-    Route::get('/test/{test}/questions/create', [QuestionController::class, 'create'])->name('questions.create');   
-    Route::post('/test/{test_id}/questions/store', [QuestionController::class, 'store'])->name('questions.store');
+    Route::get('/test/{test}/questions/create', [QuestionController::class, 'create'])->middleware('can:teacher-admin')->name('questions.create');
+    Route::post('/test/{test_id}/questions/store', [QuestionController::class, 'store'])->middleware('can:teacher-admin')->name('questions.store');
     // cross-origin-isolation: habilita SharedArrayBuffer para la consola
     // interactiva (Pyodide). Inofensivo para preguntas en modo clásico.
     Route::get('/test/{test_id}/question/{question_id}', [QuestionController::class, 'show'])
@@ -47,13 +47,14 @@ Route::middleware(['check.auth'])->group(function () {
 
     //code excetution routes
     Route::post('/run-code', [CodeController::class, 'runCode'])->name('run-code');
-    Route::post('/run-single-test', [CodeController::class, 'runSingleTest'])->name('run-single-test');
-    Route::post('/run-all-tests', [CodeController::class, 'runAllTests'])->name('run-all-tests');
+    // Devuelven la salida esperada de los casos: solo para el profesor.
+    Route::post('/run-single-test', [CodeController::class, 'runSingleTest'])->middleware('can:teacher-admin')->name('run-single-test');
+    Route::post('/run-all-tests', [CodeController::class, 'runAllTests'])->middleware('can:teacher-admin')->name('run-all-tests');
 
     //Submission Routes
     Route::post('/question/{question_id}/submit', [SubmissionController::class, 'submitCode'])->name('submit-code');
-    Route::get('/question/{question_id}/submissions', [SubmissionController::class, 'index'])->name('submissions.index');
-    Route::get('/question/{question_id}/submissions/{submission_id}', [SubmissionController::class, 'show'])->name('submissions.show');
+    Route::get('/question/{question_id}/submissions', [SubmissionController::class, 'index'])->middleware('can:teacher-admin')->name('submissions.index');
+    Route::get('/question/{question_id}/submissions/{submission_id}', [SubmissionController::class, 'show'])->middleware('can:teacher-admin')->name('submissions.show');
 
 });
 
