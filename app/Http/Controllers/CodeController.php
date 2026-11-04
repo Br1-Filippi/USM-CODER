@@ -166,6 +166,10 @@ class CodeController extends Controller
             // Judge0 los descomprime al lado del script, igual que en la consola Pyodide.
             $payload['additional_files'] = base64_encode($this->zip($question->files));
         }
+        if ($question->execution_mode === 'interactive') {
+            // En la consola el prompt de input() se ve aparte; en Judge0 caería en stdout y rompería la comparación.
+            $payload['source_code'] = "import builtins; builtins.input = lambda p='', _i=builtins.input: _i()\n" . $payload['source_code'];
+        }
 
         foreach ($tests as $i => $test) {
             try {

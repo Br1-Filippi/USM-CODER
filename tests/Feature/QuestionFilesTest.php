@@ -61,6 +61,21 @@ class QuestionFilesTest extends TestCase
         });
     }
 
+    public function test_interactive_grading_hides_input_prompt(): void
+    {
+        $this->storeQuestion(UploadedFile::fake()->createWithContent('años.txt', "3\n4\n"))->assertRedirect();
+        $question = Question::first();
+
+        Http::fake(['*' => Http::response(['stdout' => "7\n", 'status' => ['id' => 3, 'description' => 'Accepted']])]);
+
+        $this->actingAs($this->user('alumno'))
+            ->postJson("/question/{$question->id}/submit", ['source_code' => 'print(input("n: "))', 'language_id' => 71])
+            ->assertOk();
+
+        Http::assertSent(fn (Request $request) => str_starts_with($request['source_code'], 'import builtins; builtins.input = ')
+            && str_ends_with($request['source_code'], "\nprint(input(\"n: \"))"));
+    }
+
     public function test_non_utf8_file_is_rejected(): void
     {
         $this->storeQuestion(UploadedFile::fake()->createWithContent('datos.csv', "a\xF1o\n"))
