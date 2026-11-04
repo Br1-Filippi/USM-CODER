@@ -76,6 +76,24 @@ class QuestionFilesTest extends TestCase
             && str_ends_with($request['source_code'], "\nprint(input(\"n: \"))"));
     }
 
+    public function test_professor_single_test_runs_like_grading(): void
+    {
+        $this->storeQuestion(UploadedFile::fake()->createWithContent('años.txt', "3\n4\n"))->assertRedirect();
+        $question = Question::first();
+
+        Http::fake(['*' => Http::response(['stdout' => "7\n", 'status' => ['id' => 3, 'description' => 'Accepted']])]);
+
+        $this->actingAs(User::where('tipo', 'profesor')->first())
+            ->postJson('/run-single-test', [
+                'source_code' => 'print(input("n: "))', 'language_id' => 71, 'question_id' => $question->id,
+                'stdin' => '-', 'expected_output' => '7',
+            ])
+            ->assertOk()->assertJson(['passed' => true]);
+
+        Http::assertSent(fn (Request $request) => str_starts_with($request['source_code'], 'import builtins; builtins.input = ')
+            && str_contains(base64_decode($request['additional_files'] ?? ''), "años.txt3\n4\n"));
+    }
+
     public function test_non_utf8_file_is_rejected(): void
     {
         $this->storeQuestion(UploadedFile::fake()->createWithContent('datos.csv', "a\xF1o\n"))

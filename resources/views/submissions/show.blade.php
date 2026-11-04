@@ -224,6 +224,7 @@ document.querySelectorAll('.run-single-test').forEach(btn => {
                 body: JSON.stringify({
                     source_code: code,
                     language_id: {{ $question->language_id ?? 71 }},
+                    question_id: {{ $question->id }},
                     stdin: stdin,
                     expected_output: expected
                 })
@@ -231,21 +232,19 @@ document.querySelectorAll('.run-single-test').forEach(btn => {
 
             const data = await response.json();
 
-            if (data.passed) {
-                if (data.passed) {
-                    resultSpan.textContent = `Correcto (${data.output})`;
-                    resultSpan.classList.add('success');
-                    testCard.classList.add('passed');
-                } else {
-                    const errorMsg = data.stderr 
-                        ? `Error: ${data.stderr}` 
-                        : `Incorrecto (Salida: ${data.output || 'vacio'})`;
-                    resultSpan.textContent = errorMsg;
-                    resultSpan.classList.add('error');
-                    testCard.classList.add('failed');
-                }
+            if (!response.ok) {
+                resultSpan.textContent = `Error: ${data.error || data.message}`;
+                resultSpan.classList.add('error');
+                testCard.classList.add('failed');
+            } else if (data.passed) {
+                resultSpan.textContent = `Correcto (${data.output})`;
+                resultSpan.classList.add('success');
+                testCard.classList.add('passed');
             } else {
-                resultSpan.textContent = `Error: ${data.message || data.error}`;
+                const stderr = data.stderr || data.compile_output;
+                resultSpan.textContent = stderr
+                    ? `Error: ${stderr}`
+                    : `Incorrecto (Salida: ${data.output || 'vacio'})`;
                 resultSpan.classList.add('error');
                 testCard.classList.add('failed');
             }
@@ -311,36 +310,28 @@ document.getElementById('runAllTests')?.addEventListener('click', async () => {
 
         const data = await response.json();
         console.log('Data recibida:', data);
-        console.log('data.success:', data.success);
-        console.log('data.results:', data.results);
 
-        if (data.success) {
-            data.results.forEach((result) => {
-                const testCard = document.querySelector(`[data-test-index="${result.test_number - 1}"]`);
-                if (testCard) {
-                    const resultSpan = testCard.querySelector('.test-result');
-                    
-                    if (result.passed) {
-                        resultSpan.textContent = `Correcto (${result.output})`;
-                        resultSpan.classList.add('success');
-                        testCard.classList.add('passed');
-                    } else {
-                        const errorMsg = result.error 
-                            ? `Error: ${result.error}`
-                            : result.stderr
-                            ? `Error: ${result.stderr}`
-                            : `Incorrecto (Salida: ${result.output || 'vacio'})`;
-                        resultSpan.textContent = errorMsg;
-                        resultSpan.classList.add('error');
-                        testCard.classList.add('failed');
-                    }
+        data.results.forEach((result) => {
+            const testCard = document.querySelector(`[data-test-index="${result.test - 1}"]`);
+            if (testCard) {
+                const resultSpan = testCard.querySelector('.test-result');
+
+                if (result.passed) {
+                    resultSpan.textContent = `Correcto (${result.output})`;
+                    resultSpan.classList.add('success');
+                    testCard.classList.add('passed');
+                } else {
+                    const errorMsg = result.error
+                        ? `Error: ${result.error}`
+                        : result.stderr
+                        ? `Error: ${result.stderr}`
+                        : `Incorrecto (Salida: ${result.output || 'vacio'})`;
+                    resultSpan.textContent = errorMsg;
+                    resultSpan.classList.add('error');
+                    testCard.classList.add('failed');
                 }
-            });
-
-        } else {
-            console.warn('Success=false:', data.message);
-            alert(data.message || 'Error al ejecutar tests');
-        }
+            }
+        });
 
     } catch (error) {
         console.error('Error catch:', error);
