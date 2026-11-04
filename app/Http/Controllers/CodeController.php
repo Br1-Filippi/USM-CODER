@@ -9,13 +9,20 @@ use App\Models\Question;
 class CodeController extends Controller
 {
 
+    // El Judge0 propio lee X-Auth-Token y RapidAPI lee X-RapidAPI-*; cada uno ignora las del otro.
+    private function judge0Headers(): array
+    {
+        return [
+            'X-Auth-Token' => env('JUDGE_API_KEY'),
+            'X-RapidAPI-Key' => env('JUDGE_API_KEY'),
+            'X-RapidAPI-Host' => env('JUDGE_API_HOST'),
+        ];
+    }
+
     private function submitToJudge0(array $payload, bool $wait = false)
     {
         return Http::timeout(30)
-            ->withHeaders([
-                'X-Auth-Token' => env('JUDGE_API_KEY'),
-                'Content-Type' => 'application/json',
-            ])
+            ->withHeaders($this->judge0Headers() + ['Content-Type' => 'application/json'])
             ->post(
                 env('JUDGE_API_URL')
                 . '/submissions?base64_encoded=false'
@@ -30,9 +37,7 @@ class CodeController extends Controller
             sleep(1); 
 
             $response = Http::timeout(15)
-                ->withHeaders([
-                    'X-Auth-Token' => env('JUDGE_API_KEY'),
-                ])
+                ->withHeaders($this->judge0Headers())
                 ->get(
                     env('JUDGE_API_URL')
                     . "/submissions/{$token}?base64_encoded=false"
@@ -153,13 +158,18 @@ class CodeController extends Controller
         $results = [];
         $passed = 0;
 
+        $payload = [
+            'source_code' => $request->source_code,
+            'language_id' => $request->language_id,
+        ];
+        if ($question->files) {
+            // Judge0 los descomprime al lado del script, igual que en la consola Pyodide.
+            $payload['additional_files'] = base64_encode($this->zip($question->files));
+        }
+
         foreach ($tests as $i => $test) {
             try {
-                $response = $this->submitToJudge0([
-                    'source_code' => $request->source_code,
-                    'language_id' => $request->language_id,
-                    'stdin' => $test->stdin,
-                ], true);
+                $response = $this->submitToJudge0($payload + ['stdin' => $test->stdin], true);
 
                 if (!$response->successful()) {
                     throw new \Exception('Error en Judge0');
@@ -225,5 +235,20 @@ class CodeController extends Controller
         }
 
         return $data['summary']['percentage'];
+    }
+
+    // Zip sin compresión armado a mano: la imagen de PHP no trae ext-zip y el unzip de Judge0 lo lee igual.
+    private function zip(array $files): string
+    {
+        $body = $index = '';
+        foreach ($files as $name => $content) {
+            // versión 1.0, flag 0x0800 = nombre en UTF-8, método 0 = sin comprimir, fecha 2020-01-01
+            $meta = pack('vvvvvVVVv', 10, 0x0800, 0, 0, 0x5021, crc32($content), strlen($content), strlen($content), strlen($name));
+            // Hecho en Unix (0x0314) con permisos 0644: isolate corre unzip sin locale y con origen DOS rompe "años.csv".
+            $index .= pack('Vv', 0x02014b50, 0x0314) . $meta . pack('vvvvVV', 0, 0, 0, 0, 0x81A40000, strlen($body)) . $name;
+            $body .= pack('V', 0x04034b50) . $meta . pack('v', 0) . $name . $content;
+        }
+
+        return $body . $index . pack('VvvvvVVv', 0x06054b50, 0, 0, count($files), count($files), strlen($index), strlen($body), 0);
     }
 }

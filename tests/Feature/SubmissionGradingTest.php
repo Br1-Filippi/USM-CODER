@@ -45,6 +45,8 @@ class SubmissionGradingTest extends TestCase
 
         $this->submit()->assertOk()->assertJson(['score' => 50]);
         $this->assertDatabaseHas('submissions', ['user_id' => $this->student->id, 'score' => 50]);
+        // Sirve tanto para el Judge0 propio como para RapidAPI.
+        Http::assertSent(fn ($request) => $request->hasHeader('X-Auth-Token') && $request->hasHeader('X-RapidAPI-Key'));
     }
 
     public function test_judge0_failure_saves_no_grade(): void

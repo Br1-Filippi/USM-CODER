@@ -42,7 +42,7 @@ self.onmessage = async (e) => {
             break;
 
         case "run":
-            await runCode(msg.code);
+            await runCode(msg.code, msg.files);
             break;
     }
 };
@@ -106,12 +106,34 @@ function blockForLine() {
     return decoder.decode(data.slice(0, len));
 }
 
-async function runCode(code) {
+async function runCode(code, files) {
+    // Las pestañas del editor mandan: el directorio queda igual a ellas antes de correr.
+    for (const name of listFiles()) pyodide.FS.unlink(name);
+    for (const [name, text] of Object.entries(files)) pyodide.FS.writeFile(name, text);
+
     self.postMessage({ type: "run-start" });
     try {
         await pyodide.runPythonAsync(code);
         self.postMessage({ type: "run-done" });
     } catch (err) {
         self.postMessage({ type: "run-error", message: String(err) });
+    } finally {
+        // Lo que el programa creó, cambió o borró vuelve al editor como pestañas.
+        self.postMessage({ type: "files", files: readFiles() });
     }
+}
+
+// Solo archivos sueltos del directorio de trabajo (/home/pyodide); las carpetas se ignoran.
+function listFiles() {
+    return pyodide.FS.readdir(".").filter((n) => n !== "." && n !== ".." && pyodide.FS.isFile(pyodide.FS.stat(n).mode));
+}
+
+// shortcut: los binarios no se muestran y se pierden en la siguiente ejecución; para eso habría que mandarlos en bytes.
+const utf8 = new TextDecoder("utf-8", { fatal: true });
+function readFiles() {
+    const files = {};
+    for (const name of listFiles()) {
+        try { files[name] = utf8.decode(pyodide.FS.readFile(name)); } catch { /* binario */ }
+    }
+    return files;
 }

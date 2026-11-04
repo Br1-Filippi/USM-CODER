@@ -15,6 +15,10 @@
             </div>
         </div>
 
+        @if($interactive && $question->files)
+            <p class="small text-muted">Puedes editar los archivos para practicar, pero al enviar se califica con los originales de la pregunta.</p>
+        @endif
+
         <div class="mt-auto">
             <h6 class="text-secondary mb-2">Acciones</h6>
             <button type="button" id="runCode" class="btn btn-success w-100 mb-2">
@@ -44,6 +48,18 @@
     </div>
 
     <div class="flex-grow-1 d-flex flex-column">
+        @if($interactive)
+            {{-- Pestañas: main.py + archivos de la pregunta + los que cree el alumno o su programa --}}
+            <div class="d-flex align-items-center border-bottom bg-light">
+                <div id="tabs" class="d-flex flex-wrap"></div>
+                <div class="ms-auto btn-group btn-group-sm p-1">
+                    <button type="button" id="file-new" class="btn btn-outline-secondary">+ Nuevo</button>
+                    <label class="btn btn-outline-secondary mb-0">Subir<input type="file" id="file-upload" multiple hidden></label>
+                    <button type="button" id="file-download" class="btn btn-outline-secondary">Descargar</button>
+                    <button type="button" id="file-delete" class="btn btn-outline-danger">Borrar</button>
+                </div>
+            </div>
+        @endif
         <div class="flex-grow-1" style="min-height: 0;">
             <div id="editor" style="height: 100%; width: 100%;"></div>
         </div>
@@ -95,21 +111,24 @@ Si tienes mas de un input van en orden de aparicion separados por saltos de line
     const starterCode = @json($question->starting_code ?? '// Responde aca tu pregunta!!');
 
     window.require.config({ paths: { vs: 'https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.45.0/min/vs' }});
-    window.require(['vs/editor/editor.main'], function () {
+    window.editorReady = new Promise((resolve) => window.require(['vs/editor/editor.main'], function () {
         window.editor = monaco.editor.create(document.getElementById('editor'), {
-            value: starterCode,
-            language: 'python',
+            // Modelo propio y no `value`: si el editor es dueño del modelo, lo destruye al cambiar de pestaña.
+            model: monaco.editor.createModel(starterCode, 'python'),
             theme: 'vs-light',
             automaticLayout: true,
             minimap: { enabled: false }
         });
-    });
+        // El código del alumno, aunque el editor esté mostrando otra pestaña.
+        window.mainModel = window.editor.getModel();
+        resolve();
+    }));
 })();
 
 // "Enviar Respuesta" — la corrección SIEMPRE pasa por Judge0 (autoridad de notas),
 // en ambos modos.
 document.getElementById('sendAnswer').addEventListener('click', async () => {
-    const code = window.editor.getValue();
+    const code = window.mainModel.getValue();
     const questionId = {{ $question->id }};
 
     try {
@@ -130,7 +149,7 @@ document.getElementById('sendAnswer').addEventListener('click', async () => {
         if (response.ok) {
             alert('Código enviado correctamente');
         } else {
-            alert(`Error: ${data.error || data.message}`);
+            alert(`Error: ${data.message || data.error}`);
         }
     } catch (error) {
         alert('Error en la solicitud al servidor');
@@ -148,12 +167,79 @@ document.getElementById('sendAnswer').addEventListener('click', async () => {
 <script>window.__defineBackup = window.define; window.define = undefined;</script>
 <script src="https://cdn.jsdelivr.net/npm/xterm@5.3.0/lib/xterm.js" crossorigin="anonymous"></script>
 <script>window.define = window.__defineBackup; delete window.__defineBackup;</script>
-<script>window.__PY_WORKER_URL = "{{ route('runtime.python-worker') }}";</script>
+<script>window.__PY_WORKER_URL = "{{ route('runtime.python-worker') }}"; window.__QUESTION_FILES = @json($question->files ?? []);</script>
 @verbatim
 <script>
 (function () {
     const statusEl = document.getElementById("term-status");
     const runBtn = document.getElementById("runCode");
+
+    // ===== Pestañas de archivos: un modelo de Monaco por archivo =====
+    const models = new Map();
+    let current = "main.py";
+
+    function openFile(name, text) {
+        const model = models.get(name);
+        if (!model) models.set(name, monaco.editor.createModel(text, undefined, monaco.Uri.file(name)));
+        else if (model.getValue() !== text) model.setValue(text);
+    }
+
+    function show(name) {
+        current = name;
+        window.editor.setModel(models.get(name));
+        document.getElementById("tabs").replaceChildren(...[...models.keys()].map((n) => {
+            const tab = document.createElement("button");
+            tab.type = "button";
+            tab.className = "btn btn-sm rounded-0 " + (n === name ? "bg-white fw-bold border-bottom border-primary border-2" : "text-muted");
+            tab.textContent = n;
+            tab.onclick = () => show(n);
+            return tab;
+        }));
+    }
+
+    function extraFiles() {
+        return Object.fromEntries([...models].filter(([n]) => n !== "main.py").map(([n, model]) => [n, model.getValue()]));
+    }
+
+    window.editorReady.then(() => {
+        models.set("main.py", window.mainModel);
+        for (const [name, text] of Object.entries(window.__QUESTION_FILES)) openFile(name, text);
+        show("main.py");
+    });
+
+    document.getElementById("file-new").onclick = () => {
+        const name = (prompt("Nombre del archivo:", "datos.txt") || "").trim();
+        if (!name || name.includes("/")) return;
+        if (!models.has(name)) openFile(name, "");
+        show(name);
+    };
+
+    document.getElementById("file-upload").onchange = async (e) => {
+        for (const file of e.target.files) {
+            try {
+                openFile(file.name, new TextDecoder("utf-8", { fatal: true }).decode(await file.arrayBuffer()));
+                show(file.name);
+            } catch {
+                alert(`${file.name} no es un archivo de texto (UTF-8).`);
+            }
+        }
+        e.target.value = "";
+    };
+
+    document.getElementById("file-download").onclick = () => {
+        const a = document.createElement("a");
+        a.href = URL.createObjectURL(new Blob([models.get(current).getValue()], { type: "text/plain" }));
+        a.download = current;
+        a.click();
+        setTimeout(() => URL.revokeObjectURL(a.href));
+    };
+
+    document.getElementById("file-delete").onclick = () => {
+        if (current === "main.py" || !confirm(`¿Borrar ${current}?`)) return;
+        models.get(current).dispose();
+        models.delete(current);
+        show("main.py");
+    };
 
     const term = new Terminal({
         convertEol: false,
@@ -262,6 +348,19 @@ document.getElementById('sendAnswer').addEventListener('click', async () => {
                 term.write(`\r\n\x1b[31m${m.message}\x1b[0m\r\n`);
                 runBtn.disabled = false;
                 break;
+            case "files":
+                // Lo que quedó en el directorio después de correr: pestañas nuevas, cambiadas o borradas.
+                for (const name of [...models.keys()]) {
+                    if (name !== "main.py" && !(name in m.files)) {
+                        models.get(name).dispose();
+                        models.delete(name);
+                    }
+                }
+                for (const [name, text] of Object.entries(m.files)) {
+                    if (name !== "main.py") openFile(name, text);
+                }
+                show(models.has(current) ? current : "main.py");
+                break;
         }
     };
 
@@ -272,7 +371,7 @@ document.getElementById('sendAnswer').addEventListener('click', async () => {
         lineBuffer = "";
         term.reset();
         term.focus();
-        worker.postMessage({ type: "run", code: window.editor.getValue() });
+        worker.postMessage({ type: "run", code: models.get("main.py").getValue(), files: extraFiles() });
     });
 })();
 </script>
