@@ -1,7 +1,7 @@
 @extends('layouts.navbar')
 
 @section('main-content')
-<form action="{{ route('questions.store', $test_id ) }}" method="POST">
+<form action="{{ route('questions.store', $test_id ) }}" method="POST" enctype="multipart/form-data">
     @csrf
     <div class="d-flex" style="height: calc(100vh - 56px); width: 100%;">
         <!-- COLUMNA IZQUIERDA: Información de la pregunta -->
@@ -37,6 +37,17 @@
 
                     <label for="score" class="form-label fw-bold">Puntaje</label>
                     <input type="number" class="form-control" id="score" name="score" min="0" step="1" required>
+                </div>
+            </div>
+
+            <div class="card shadow-sm mb-3">
+                <div class="card-body">
+                    <label for="files" class="form-label fw-bold">Archivos (opcional)</label>
+                    <input type="file" class="form-control" id="files" name="files[]" multiple>
+                    <small class="text-muted">Texto UTF-8, hasta 512 KB cada uno (ej. datos.txt). El programa del alumno los puede abrir por su nombre.</small>
+                    @error('files.*')
+                        <div class="text-danger small mt-1">{{ $message }}</div>
+                    @enderror
                 </div>
             </div>
 

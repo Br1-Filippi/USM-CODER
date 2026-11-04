@@ -13,6 +13,8 @@ class Question extends Model
 
     public $timestamps = false;
 
+    protected $casts = ['files' => 'array'];
+
     public function test()
     {
         return $this->belongsTo(Test::class, 'test_id');

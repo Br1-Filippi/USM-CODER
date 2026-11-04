@@ -32,6 +32,11 @@ class QuestionController extends Controller
      */
     public function store(Request $request, $test_id) // Crear form request
     {
+        // shortcut: solo texto UTF-8 (se edita en Monaco); para binarios (xlsx, imágenes) habría que guardarlos en base64.
+        $request->validate([
+            'files.*' => ['bail', 'file', 'max:512', fn ($attribute, $file, $fail) => mb_check_encoding($file->get(), 'UTF-8')
+                || $fail("{$file->getClientOriginalName()} no es texto UTF-8. Guárdalo como UTF-8 (en Excel: CSV UTF-8).")],
+        ]);
 
         $question = new Question;
         $question->title = $request->input('title');
@@ -46,6 +51,11 @@ class QuestionController extends Controller
         $question->execution_mode = in_array($mode, ['judge0', 'interactive'], true) ? $mode : 'judge0';
 
         $question->test_id = $test_id;
+
+        foreach ($request->file('files', []) as $file) {
+            $files[basename($file->getClientOriginalName())] = $file->get();
+        }
+        $question->files = $files ?? null;
 
         $question->save();
 
