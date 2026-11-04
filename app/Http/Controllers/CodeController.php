@@ -99,16 +99,18 @@ class CodeController extends Controller
         $request->validate([
             'source_code' => 'required|string',
             'language_id' => 'required|integer',
+            'question_id' => 'required|integer',
             'stdin' => 'required|string',
             'expected_output' => 'required|string',
         ]);
 
+        $question = Question::findOrFail($request->question_id);
+
         try {
-            $response = $this->submitToJudge0([
-                'source_code' => $request->source_code,
-                'language_id' => $request->language_id,
-                'stdin' => $request->stdin,
-            ], true);
+            $response = $this->submitToJudge0(
+                $this->gradingPayload($question, $request->source_code, $request->language_id) + ['stdin' => $request->stdin],
+                true
+            );
 
             if (!$response->successful()) {
                 throw new \Exception('Error al ejecutar el test');
@@ -158,18 +160,7 @@ class CodeController extends Controller
         $results = [];
         $passed = 0;
 
-        $payload = [
-            'source_code' => $request->source_code,
-            'language_id' => $request->language_id,
-        ];
-        if ($question->files) {
-            // Judge0 los descomprime al lado del script, igual que en la consola Pyodide.
-            $payload['additional_files'] = base64_encode($this->zip($question->files));
-        }
-        if ($question->execution_mode === 'interactive') {
-            // En la consola el prompt de input() se ve aparte; en Judge0 caería en stdout y rompería la comparación.
-            $payload['source_code'] = "import builtins; builtins.input = lambda p='', _i=builtins.input: _i()\n" . $payload['source_code'];
-        }
+        $payload = $this->gradingPayload($question, $request->source_code, $request->language_id);
 
         foreach ($tests as $i => $test) {
             try {
@@ -198,6 +189,7 @@ class CodeController extends Controller
                     'output' => $output,
                     'passed' => $ok,
                     'status' => $data['status']['description'] ?? null,
+                    'stderr' => $data['stderr'] ?? null,
                 ];
 
             } catch (\Exception $e) {
@@ -239,6 +231,22 @@ class CodeController extends Controller
         }
 
         return $data['summary']['percentage'];
+    }
+
+    // La corrección (nota y botones del profesor) corre el código tal como lo vería la pregunta.
+    private function gradingPayload(Question $question, string $sourceCode, int $languageId): array
+    {
+        $payload = ['source_code' => $sourceCode, 'language_id' => $languageId];
+        if ($question->files) {
+            // Judge0 los descomprime al lado del script, igual que en la consola Pyodide.
+            $payload['additional_files'] = base64_encode($this->zip($question->files));
+        }
+        if ($question->execution_mode === 'interactive') {
+            // En la consola el prompt de input() se ve aparte; en Judge0 caería en stdout y rompería la comparación.
+            $payload['source_code'] = "import builtins; builtins.input = lambda p='', _i=builtins.input: _i()\n" . $payload['source_code'];
+        }
+
+        return $payload;
     }
 
     // Zip sin compresión armado a mano: la imagen de PHP no trae ext-zip y el unzip de Judge0 lo lee igual.
